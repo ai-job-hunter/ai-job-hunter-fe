@@ -1,0 +1,103 @@
+# =============================================================================
+# AI Job Hunter - Docker Compose 配置（生产环境）
+#
+# 部署说明：
+#   - CI 构建镜像 → push 到 GHCR
+#   - 服务器只 docker compose pull + up（不 build，不拷贝 compose）
+#
+# 网络分层：
+#   proxy    → Traefik 入口网络（公网访问）
+#   internal → 内部服务通信网络（Frontend ↔ Backend）
+#   db-net   → 数据库网络（Backend → PostgreSQL / Redis）
+#
+# 架构说明：
+#   - Traefik → Frontend（仅路由到前端）
+#   - Frontend 内置 nginx，反向代理 /api/* → Backend
+#   - Backend 不暴露公网，通过 internal 网络被前端访问
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Frontend 服务（Nginx + Nuxt 静态）
+  # Nginx 负责：服务前端静态文件 + 反向代理 /api/* 到后端
+  # ---------------------------------------------------------------------------
+  frontend:
+    image: ghcr.io/${IMAGE_NAMESPACE}/ai-job-hunter-fe:${IMAGE_TAG:-latest}
+    container_name: aijobhunter-frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+      - docker-tag.env
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - proxy      # Traefik 入口
+      - internal   # 访问后端
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      # HTTP → HTTPS 重定向
+      - "traefik.http.routers.frontend-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend-http.entrypoints=web"
+      - "traefik.http.routers.frontend-http.middlewares=frontend-https-redirect"
+      - "traefik.http.middlewares.frontend-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.frontend-https-redirect.redirectscheme.permanent=true"
+
+  # ---------------------------------------------------------------------------
+  # Java 后端服务（含 Spring AI Agent）
+  # 仅 internal 网络访问，不暴露公网
+  # ---------------------------------------------------------------------------
+  api-server:
+    image: ghcr.io/${IMAGE_NAMESPACE}/ai-job-hunter-be:${IMAGE_TAG:-latest}
+    container_name: aijobhunter-api
+    restart: unless-stopped
+    env_file:
+      - .env
+      - docker-tag.env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      DATABASE_USERNAME: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    networks:
+      - internal   # 内部服务通信（Frontend → Backend）
+      - db-net     # 数据库访问
+    labels:
+      - "traefik.enable=false"
+
+# =============================================================================
+# 网络配置
+# =============================================================================
+networks:
+  proxy:
+    external: true
+    name: proxy
+  internal:
+    external: true
+    name: internal
+  db-net:
+    external: true
+    name: db-net
