@@ -56,12 +56,12 @@ services:
       - "traefik.http.middlewares.frontend-https-redirect.redirectscheme.permanent=true"
 
   # ---------------------------------------------------------------------------
-  # Java 后端服务（含 Spring AI Agent）
+  # Java 后端服务（ai-job-hunter-be）
   # 仅 internal 网络访问，不暴露公网
   # ---------------------------------------------------------------------------
-  api-server:
+  ai-job-hunter-be:
     image: ghcr.io/${IMAGE_NAMESPACE}/ai-job-hunter-be:${IMAGE_TAG:-latest}
-    container_name: aijobhunter-api
+    container_name: aijobhunter-be
     restart: unless-stopped
     env_file:
       - .env
