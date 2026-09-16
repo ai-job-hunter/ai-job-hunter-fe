@@ -1,0 +1,69 @@
+# AI Job Hunter Frontend - CD Workflow
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+env:
+  IMAGE_REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  IMAGE_PROJECT: ai-job-hunter-fe
+  COMPOSE_FILE: docker-compose.yml
+  DEPLOY_PRIMARY_BRANCH: ${{ vars.DEPLOY_PRIMARY_BRANCH || 'main' }}
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check deploy branch
+        run: |
+          if [ "${{ github.event.workflow_run.head_branch }}" != "${{ env.DEPLOY_PRIMARY_BRANCH }}" ]; then
+            echo "Not primary branch (${{ github.event.workflow_run.head_branch }}), skipping"
+            exit 78
+          fi
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "CI did not succeed, skipping deployment"
+            exit 78
+          fi
+
+      - name: Validate SSH key
+        run: |
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/ssh_key
+          chmod 600 ~/ssh_key
+          ssh-keygen -l -f ~/ssh_key
+          echo "SSH key validated"
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH,COMPOSE_FILE
+          script: |
+            set -e
+            echo "=== Login to GHCR ==="
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "=== Pull and restart frontend ==="
+            cd ${{ env.DEPLOY_PATH }}
+            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} pull frontend
+            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} up -d --no-deps frontend
+
+            echo "=== Done ==="
+            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} ps frontend
+
+      - name: Cleanup
+        run: rm -f ~/ssh_key
