@@ -1,70 +1,121 @@
-# AI Job Hunter Frontend - CD Workflow
+# =============================================================================
+# AI Job Hunter Frontend - CI/CD Workflow
+#
+# 触发条件：
+#   - main 分支 push（自动构建 + 部署）
+#   - 手动触发（workflow_dispatch）
+#
+# 流程：构建 Nuxt SPA → 推送 GHCR 镜像 → SSH 服务器拉镜像重启
+#
+# 需要的 GitHub Secrets：
+#   DEPLOY_HOST          服务器 IP
+#   DEPLOY_USER          SSH 用户名
+#   DEPLOY_SSH_PORT      SSH 端口（默认 22）
+#   DEPLOY_SSH_KEY       SSH 私钥
+#
+# 需要的 GitHub Variables（可选）：
+#   DEPLOY_PRIMARY_BRANCH   主部署分支，默认 main
+#   DEPLOY_PATH             服务器部署目录，默认 /opt/project/ai-job-hunter
+# =============================================================================
 
-name: CD
+name: CI/CD
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-
-env:
-  IMAGE_REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: ${{ github.repository_owner }}
-  IMAGE_PROJECT: ai-job-hunter-fe
-  COMPOSE_FILE: docker-compose.yml
-  DEPLOY_PRIMARY_BRANCH: ${{ vars.DEPLOY_PRIMARY_BRANCH || 'main' }}
-  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  packages: read
-  actions: write
+  packages: write
+
+env:
+  PROJECT_NAME: ai-job-hunter-fe
+  IMAGE_REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+  DEPLOY_PRIMARY_BRANCH: ${{ vars.DEPLOY_PRIMARY_BRANCH || 'main' }}
+  DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/project/ai-job-hunter' }}
 
 jobs:
-  deploy:
-    name: Deploy to Server
+  # ─── 分支门控 ────────────────────────────────────────────────────────────
+  gate:
+    name: Branch Gate
     runs-on: ubuntu-latest
-    environment: production
-    env:
-      GH_TOKEN: ${{ github.token }}
-
+    outputs:
+      should_deploy: ${{ steps.gate.outputs.should_deploy }}
     steps:
-      - name: Set workflow run name from git commit
+      - name: Check branch
+        id: gate
         run: |
-          set +e
-          COMMIT_MSG=$(gh api repos/${{ github.repository }}/commits/${{ github.event.workflow_run.head_sha }} --jq '.commit.message' 2>/dev/null | head -1)
-          if [ -z "$COMMIT_MSG" ]; then
-            COMMIT_MSG="${{ github.event.workflow_run.head_sha }}"
-          fi
-          gh api repos/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }} \
-            -X PATCH \
-            -f name="🚀 ${COMMIT_MSG%\\n*}" || true
-
-      - name: Check deploy branch
-        run: |
-          if [ "${{ github.event.workflow_run.head_branch }}" != "${{ env.DEPLOY_PRIMARY_BRANCH }}" ]; then
-            echo "Not primary branch (${{ github.event.workflow_run.head_branch }}), skipping"
-            exit 78
-          fi
-          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
-            echo "CI did not succeed, skipping deployment"
-            exit 78
+          if [ "${{ github.ref_name }}" = "${{ env.DEPLOY_PRIMARY_BRANCH }}" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "⏭ Skipping: triggered by ${{ github.ref_name }}, primary is ${{ env.DEPLOY_PRIMARY_BRANCH }}"
           fi
 
-      - name: Get commit info
-        id: commit
+  # ─── 构建 & 推送镜像 ────────────────────────────────────────────────────
+  build:
+    name: Build & Push Image
+    needs: gate
+    if: needs.gate.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+      short_sha: ${{ steps.vars.outputs.short_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            API_BASE=
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract variables
+        id: vars
         run: |
-          COMMIT_MSG=$(gh api repos/${{ github.repository }}/commits/${{ github.event.workflow_run.head_sha }} --jq '.commit.message' 2>/dev/null | head -1)
-          echo "message=${COMMIT_MSG}" >> "$GITHUB_OUTPUT"
-          echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(echo '${{ github.sha }}' | cut -c1-8)" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         run: |
-          echo "## 🚀 Deploy: ${{ env.IMAGE_PROJECT }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ steps.commit.outputs.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Message**: ${{ steps.commit.outputs.message }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Triggered by**: CI workflow on \`${{ github.event.workflow_run.head_branch }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏗️ Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}:${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
 
+  # ─── 部署到服务器 ────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Server
+    needs: [gate, build]
+    if: needs.gate.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
       - name: Validate SSH key
         run: |
           printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/ssh_key
@@ -72,26 +123,46 @@ jobs:
           ssh-keygen -l -f ~/ssh_key
           echo "SSH key validated"
 
-      - name: Deploy to server
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          IMAGE_TAG: sha-${{ github.sha }}
+          IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_PATH,COMPOSE_FILE
+          envs: IMAGE_TAG,IMAGE_NAMESPACE,IMAGE_REGISTRY,DEPLOY_PATH
           script: |
             set -e
             echo "=== Login to GHCR ==="
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
+
+            echo "=== Update docker-tag.env ==="
+            cd $DEPLOY_PATH
+            {
+              echo "IMAGE_TAG=${IMAGE_TAG}"
+              echo "IMAGE_NAMESPACE=${IMAGE_NAMESPACE}"
+              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' docker-tag.env 2>/dev/null || true
+            } > docker-tag.env.tmp && mv docker-tag.env.tmp docker-tag.env
 
             echo "=== Pull and restart frontend ==="
-            cd ${{ env.DEPLOY_PATH }}
-            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} pull frontend
-            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} up -d --no-deps frontend
+            docker compose --env-file .env -f docker-compose.yml pull frontend
+            docker compose --env-file .env -f docker-compose.yml up -d frontend
 
             echo "=== Done ==="
-            docker compose --env-file .env -f ${{ env.COMPOSE_FILE }} ps frontend
+            docker compose --env-file .env -f docker-compose.yml ps frontend
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Server**: \`${{ secrets.DEPLOY_HOST }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}:${IMAGE_TAG:-latest}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Cleanup
         run: rm -f ~/ssh_key
