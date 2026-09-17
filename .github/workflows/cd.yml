@@ -129,7 +129,7 @@ jobs:
           IMAGE_TAG: sha-${{ github.sha }}
           IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
           IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
-          DEPLOY_PATH: ${{ env.DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -138,20 +138,21 @@ jobs:
           envs: IMAGE_TAG,IMAGE_NAMESPACE,IMAGE_REGISTRY,DEPLOY_PATH
           script: |
             set -e
+            cd $DEPLOY_PATH
             echo "=== Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
             echo "=== Update docker-tag.env ==="
-            cd $DEPLOY_PATH
+            TMPFILE=$(mktemp)
             {
               echo "IMAGE_TAG=${IMAGE_TAG}"
               echo "IMAGE_NAMESPACE=${IMAGE_NAMESPACE}"
-              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' docker-tag.env 2>/dev/null || true
-            } > docker-tag.env.tmp && mv docker-tag.env.tmp docker-tag.env
+              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' docker-tag.env
+            } > "$TMPFILE" && mv "$TMPFILE" docker-tag.env
 
             echo "=== Pull and restart frontend ==="
             docker compose --env-file .env -f docker-compose.yml pull frontend
-            docker compose --env-file .env -f docker-compose.yml up -d frontend
+            docker compose --env-file .env -f docker-compose.yml up -d --no-deps frontend
 
             echo "=== Done ==="
             docker compose --env-file .env -f docker-compose.yml ps frontend
