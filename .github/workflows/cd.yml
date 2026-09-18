@@ -139,8 +139,13 @@ jobs:
           script: |
             set -e
             echo "=== Current dir ==="
-            pwd && ls $DEPLOY_PATH
-            cd $DEPLOY_PATH
+            pwd
+            echo "DEPLOY_PATH=$DEPLOY_PATH"
+            ls -la $DEPLOY_PATH
+            echo "=== Check compose file ==="
+            cat $DEPLOY_PATH/docker-compose.yml | head -30
+            echo "=== Docker compose config ==="
+            docker compose --env-file $DEPLOY_PATH/.env -f $DEPLOY_PATH/docker-compose.yml config --services
             echo "=== Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
