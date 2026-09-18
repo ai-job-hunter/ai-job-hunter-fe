@@ -138,6 +138,8 @@ jobs:
           envs: IMAGE_TAG,IMAGE_NAMESPACE,IMAGE_REGISTRY,DEPLOY_PATH
           script: |
             set -e
+            echo "=== Current dir ==="
+            pwd && ls $DEPLOY_PATH
             cd $DEPLOY_PATH
             echo "=== Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
