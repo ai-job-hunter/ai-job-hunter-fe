@@ -138,14 +138,6 @@ jobs:
           envs: IMAGE_TAG,IMAGE_NAMESPACE,IMAGE_REGISTRY,DEPLOY_PATH
           script: |
             set -e
-            echo "=== Current dir ==="
-            pwd
-            echo "DEPLOY_PATH=$DEPLOY_PATH"
-            ls -la $DEPLOY_PATH
-            echo "=== Check compose file ==="
-            cat $DEPLOY_PATH/docker-compose.yml | head -30
-            echo "=== Docker compose config ==="
-            docker compose --env-file $DEPLOY_PATH/.env -f $DEPLOY_PATH/docker-compose.yml config --services
             echo "=== Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
@@ -154,15 +146,15 @@ jobs:
             {
               echo "IMAGE_TAG=${IMAGE_TAG}"
               echo "IMAGE_NAMESPACE=${IMAGE_NAMESPACE}"
-              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' docker-tag.env
-            } > "$TMPFILE" && mv "$TMPFILE" docker-tag.env
+              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' $DEPLOY_PATH/docker-tag.env
+            } > "$TMPFILE" && mv "$TMPFILE" $DEPLOY_PATH/docker-tag.env
 
             echo "=== Pull and restart frontend ==="
-            docker compose --env-file .env -f docker-compose.yml pull frontend
-            docker compose --env-file .env -f docker-compose.yml up -d --no-deps frontend
+            docker compose --env-file $DEPLOY_PATH/.env -f $DEPLOY_PATH/docker-compose.yml pull ai-job-hunter-fe
+            docker compose --env-file $DEPLOY_PATH/.env -f $DEPLOY_PATH/docker-compose.yml up -d --no-deps ai-job-hunter-fe
 
             echo "=== Done ==="
-            docker compose --env-file .env -f docker-compose.yml ps frontend
+            docker compose --env-file $DEPLOY_PATH/.env -f $DEPLOY_PATH/docker-compose.yml ps ai-job-hunter-fe
 
       - name: Summary
         if: always()
