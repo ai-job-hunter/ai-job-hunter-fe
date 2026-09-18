@@ -12,10 +12,10 @@
 #   DEPLOY_USER          SSH 用户名
 #   DEPLOY_SSH_PORT      SSH 端口（默认 22）
 #   DEPLOY_SSH_KEY       SSH 私钥
+#   DEPLOY_PATH          服务器部署目录，默认 /opt/project/ai-job-hunter
 #
 # 需要的 GitHub Variables（可选）：
 #   DEPLOY_PRIMARY_BRANCH   主部署分支，默认 main
-#   DEPLOY_PATH             服务器部署目录，默认 /opt/project/ai-job-hunter
 # =============================================================================
 
 name: CI/CD
@@ -34,7 +34,7 @@ env:
   IMAGE_REGISTRY: ghcr.io
   IMAGE_NAMESPACE: ${{ github.repository_owner }}
   DEPLOY_PRIMARY_BRANCH: ${{ vars.DEPLOY_PRIMARY_BRANCH || 'main' }}
-  DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/project/ai-job-hunter' }}
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/project/ai-job-hunter' }}
 
 jobs:
   # ─── 分支门控 ────────────────────────────────────────────────────────────
@@ -78,9 +78,12 @@ jobs:
 
       - name: Extract variables
         id: vars
+        env:
+          PROJECT_NAME: ${{ env.PROJECT_NAME }}
         run: |
           # 镜像 tag 格式：服务名-年月日時分秒（如 ai-job-hunter-fe-20250918103000）
-          echo "image_tag=$(echo '${{ env.PROJECT_NAME }}' | sed 's/_/-/g')-$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+          sanitized=$(echo "$PROJECT_NAME" | sed 's/_/-/g')
+          echo "image_tag=${sanitized}-$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -118,11 +121,11 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
-          env:
-            IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
-            IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
-            IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
-            DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
+          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
