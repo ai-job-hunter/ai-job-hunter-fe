@@ -61,8 +61,7 @@ jobs:
     if: needs.gate.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-      short_sha: ${{ steps.vars.outputs.short_sha }}
+      image_tag: ${{ steps.vars.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -77,35 +76,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.PROJECT_NAME }}:${{ github.run_id }}
-            ghcr.io/${{ github.repository_owner }}/${{ env.PROJECT_NAME }}:latest
+      - name: Extract variables
+        id: vars
+        run: |
+          # 镜像 tag 格式：服务名-年月日時分秒（如 ai-job-hunter-fe-20250918103000）
+          echo "image_tag=$(echo '${{ env.PROJECT_NAME }}' | sed 's/_/-/g')-$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.PROJECT_NAME }}:${{ steps.vars.outputs.image_tag }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.PROJECT_NAME }}:latest
           build-args: |
             API_BASE=
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Extract variables
-        id: vars
-        run: |
-          echo "short_sha=$(echo '${{ github.sha }}' | cut -c1-8)" >> "$GITHUB_OUTPUT"
-
       - name: Summary
         run: |
           echo "## 🏗️ Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: \`${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}:${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ env.PROJECT_NAME }}:${{ steps.vars.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
 
   # ─── 部署到服务器 ────────────────────────────────────────────────────────
@@ -125,11 +118,11 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
-        env:
-          IMAGE_TAG: ${{ github.run_id }}
-          IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
-          IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          env:
+            IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+            IMAGE_NAMESPACE: ${{ env.IMAGE_NAMESPACE }}
+            IMAGE_REGISTRY: ${{ env.IMAGE_REGISTRY }}
+            DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -139,7 +132,7 @@ jobs:
           script: |
             set -e
             echo "=== Login to GHCR ==="
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
+            echo "${{ github.token }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
             echo "=== Update docker-tag.env ==="
             {
