@@ -142,12 +142,11 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
             echo "=== Update docker-tag.env ==="
-            TMPFILE=$(mktemp)
             {
               echo "IMAGE_TAG=${IMAGE_TAG}"
               echo "IMAGE_NAMESPACE=${IMAGE_NAMESPACE}"
               grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' $DEPLOY_PATH/docker-tag.env 2>/dev/null || true
-            } > "$TMPFILE" && mv "$TMPFILE" $DEPLOY_PATH/docker-tag.env
+            } | tee $DEPLOY_PATH/docker-tag.env > /dev/null
 
             echo "=== Pull and restart (tag: $IMAGE_TAG) ==="
             docker compose -f $DEPLOY_PATH/docker-compose.yml pull ai-job-hunter-fe
