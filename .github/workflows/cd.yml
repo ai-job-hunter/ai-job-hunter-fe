@@ -141,7 +141,15 @@ jobs:
             echo "=== Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
 
-            echo "=== Pull and restart frontend (using CI env IMAGE_TAG) ==="
+            echo "=== Update docker-tag.env ==="
+            TMPFILE=$(mktemp)
+            {
+              echo "IMAGE_TAG=${IMAGE_TAG}"
+              echo "IMAGE_NAMESPACE=${IMAGE_NAMESPACE}"
+              grep -v '^IMAGE_TAG=\|^IMAGE_NAMESPACE=' $DEPLOY_PATH/docker-tag.env 2>/dev/null || true
+            } > "$TMPFILE" && mv "$TMPFILE" $DEPLOY_PATH/docker-tag.env
+
+            echo "=== Pull and restart (tag: $IMAGE_TAG) ==="
             docker compose -f $DEPLOY_PATH/docker-compose.yml pull ai-job-hunter-fe
             docker compose -f $DEPLOY_PATH/docker-compose.yml up -d --no-deps ai-job-hunter-fe
 
