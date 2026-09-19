@@ -27,7 +27,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - docker-tag.env
     expose:
       - "80"
     healthcheck:
@@ -65,7 +64,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-      - docker-tag.env
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DATABASE_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
