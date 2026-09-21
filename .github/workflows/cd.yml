@@ -155,7 +155,7 @@ jobs:
 
             echo "=== Pull and restart (tag: latest) ==="
             docker compose -f $DEPLOY_PATH/docker-compose.yml pull ai-job-hunter-fe
-            docker compose -f $DEPLOY_PATH/docker-compose.yml up -d --no-deps ai-job-hunter-fe
+            docker compose -f $DEPLOY_PATH/docker-compose.yml up -d --remove-orphans ai-job-hunter-fe
 
             echo "=== Done ==="
             docker compose -f $DEPLOY_PATH/docker-compose.yml ps ai-job-hunter-fe
