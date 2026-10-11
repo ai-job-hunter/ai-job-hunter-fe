@@ -131,9 +131,11 @@ poetry run python -m src.main --mode server --port 8081
 |------|------|
 | `Dockerfile` | 构建时 `API_BASE=` 写入静态产物；运行阶段 Nginx 托管 |
 | `nginx.conf` | 同源反代 `/api/`、精确 `/health`、gzip、长连接超时 |
-| `docker-compose.yml` | Traefik `Host(\`${DOMAIN}\`)` + `wget -qO- .../health` |
+| `docker-compose.yml` | 服务名 `ai-job-hunter-fe`；Traefik 端口 **80** + `Host(\`${DOMAIN}\`)` |
 
-域名打不开时优先查：服务器 `.env` 的 `DOMAIN`、前端容器是否 `healthy`、Traefik 日志是否 `Filtering unhealthy`。
+**502 Bad Gateway**：多半是服务器 compose 仍写端口 **3000**（旧 Node），而新镜像是 Nginx **80**。CD 不覆盖远程 compose，需人工改后 `docker compose up -d --force-recreate ai-job-hunter-fe`。
+
+域名打不开时优先查：`.env` 的 `DOMAIN`、前端是否 `healthy`、Traefik 是否指到 80。
 
 ## 文档
 
