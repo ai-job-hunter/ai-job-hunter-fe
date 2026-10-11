@@ -1,44 +1,32 @@
-# =============================================================================
-# AI Job Hunter Frontend - 生产镜像构建
-# 多阶段构建：Nuxt build → Nginx 托管
-#
-# 构建参数：
-#   API_BASE  构建时注入，生产前端发同源 /api（由 nginx 反代到后端）
-# =============================================================================
-
-# ─── 构建阶段 ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+# =====================================================================
+# 阶段一：构建（对齐 cogniforge-web 方案 A）
+# =====================================================================
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# 安装依赖
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 RUN npm ci
 
-# 复制源码
 COPY . .
-
-# 构建时注入：生产环境 API_BASE 为空（同源），本地 dev 用 http://localhost:8080
+# 静态托管没有运行时 Nuxt 配置；API 基址必须在构建时写入产物。
+# 空字符串 = 浏览器请求当前域名 /api/v1/*，由本容器 Nginx 转发到后端。
+# 不要写成 /api：接口路径已包含 /api/v1，再拼会变成 /api/api/v1。
 ARG API_BASE=
 ENV API_BASE=$API_BASE
 ENV NODE_ENV=production
-
-# 构建 Nuxt 静态产物
 RUN npm run build
 
-# ─── 运行阶段 ───────────────────────────────────────────────────────────────
+# =====================================================================
+# 阶段二：运行（nginx 静态托管）
+# =====================================================================
 FROM nginx:alpine
 
-# 复制构建产物
 COPY --from=builder /app/.output/public /usr/share/nginx/html
-
-# 复制 Nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# 健康检查（Alpine 用 BusyBox wget）
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -q --spider http://127.0.0.1/health || exit 1
 
 EXPOSE 80
 
+# Traefik 通过 HTTP 代理，无需 TLS
+# 健康检查放在 docker-compose.yml（与 cogniforge-web 一致），勿写 3000
 CMD ["nginx", "-g", "daemon off;"]

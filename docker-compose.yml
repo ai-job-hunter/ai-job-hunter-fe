@@ -29,8 +29,11 @@ services:
       - .env
     expose:
       - "80"
+    # Traefik v3 会过滤 unhealthy/starting 容器
+    # nginx 监听 80；/health 为精确 location（见 nginx.conf），勿用 3000 或 /health/
+    # 这是【前端 Nginx】检查，不是 Spring Actuator（/actuator/health）
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/health"]
       interval: 15s
       timeout: 5s
       retries: 3

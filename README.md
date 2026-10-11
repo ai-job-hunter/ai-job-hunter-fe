@@ -103,9 +103,11 @@ cd ai-job-hunter-be
 
 ```bash
 cd ai-job-hunter-fe
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
+
+本地开发时 API 打本机后端：在 shell 或 `.env` 里设 `API_BASE=http://localhost:8080`（路径本身已含 `/api/v1`，不要再拼 `/api`）。
 
 ### 6. 启动 Python Agent
 
@@ -116,9 +118,26 @@ poetry run playwright install chromium
 poetry run python -m src.main --mode server --port 8081
 ```
 
+## 生产部署（方案 A，对齐 cogniforge-web）
+
+```
+浏览器 → Traefik(Host=DOMAIN) → frontend:80（Nginx）
+                                    ├─ /health → 200 ok（compose healthcheck）
+                                    ├─ /api/*  → ai-job-hunter-be:8080（保留完整路径）
+                                    └─ /*      → SPA 静态文件
+```
+
+| 文件 | 作用 |
+|------|------|
+| `Dockerfile` | 构建时 `API_BASE=` 写入静态产物；运行阶段 Nginx 托管 |
+| `nginx.conf` | 同源反代 `/api/`、精确 `/health`、gzip、长连接超时 |
+| `docker-compose.yml` | Traefik `Host(\`${DOMAIN}\`)` + `wget -qO- .../health` |
+
+域名打不开时优先查：服务器 `.env` 的 `DOMAIN`、前端容器是否 `healthy`、Traefik 日志是否 `Filtering unhealthy`。
+
 ## 文档
 
-详细文档请查看 `docs/` 目录：
+详细文档请查看后端仓库 `docs/` 目录（规范文档集中在 be）：
 
 | 文档 | 说明 |
 |-----|------|
