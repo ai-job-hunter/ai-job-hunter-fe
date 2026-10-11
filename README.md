@@ -107,7 +107,7 @@ npm install
 npm run dev
 ```
 
-本地开发时 API 打本机后端：在 shell 或 `.env` 里设 `API_BASE=http://localhost:8080`（路径本身已含 `/api/v1`，不要再拼 `/api`）。
+本地开发：`API_BASE` 保持为空，请求走同源 `/api/*`，由 Nuxt vite 代理到 `http://127.0.0.1:8080`（与生产 Nginx 一致，后端不必开 CORS）。
 
 ### 6. 启动 Python Agent
 
