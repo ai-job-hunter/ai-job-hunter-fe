@@ -111,6 +111,8 @@ npm run dev
 
 **登录可用用户名或邮箱**（请求字段 `account`）。注册成功后会自动登录进首页。
 
+登录/注册页采用 **黛青水墨** 视觉 + **lonely √3** 品牌标（见 `public/logo.svg`）。
+
 ### 6. 启动 Python Agent
 
 ```bash

@@ -1,34 +1,62 @@
 <template>
   <div>
-    <div v-if="error" class="bg-red-50 text-red-600 text-sm p-3 rounded mb-4">{{ error }}</div>
-    <form @submit.prevent="handleRegister" class="space-y-4">
+    <form class="auth-form" @submit.prevent="handleRegister">
+      <div v-if="error" class="auth-error" role="alert">{{ error }}</div>
       <div>
-        <label class="block text-sm font-medium text-gray-700">用户名</label>
-        <input v-model="form.username" type="text" required autocomplete="nickname"
-               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label class="auth-label" for="reg-username">用户名</label>
+        <input
+          id="reg-username"
+          v-model="form.username"
+          class="auth-input"
+          type="text"
+          required
+          autocomplete="nickname"
+          placeholder="怎么称呼你"
+        />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700">邮箱</label>
-        <input v-model="form.email" type="email" required autocomplete="email"
-               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label class="auth-label" for="reg-email">邮箱</label>
+        <input
+          id="reg-email"
+          v-model="form.email"
+          class="auth-input"
+          type="email"
+          required
+          autocomplete="email"
+          placeholder="name@example.com"
+        />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700">密码</label>
-        <input v-model="form.password" type="password" required autocomplete="new-password"
-               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label class="auth-label" for="reg-password">密码</label>
+        <input
+          id="reg-password"
+          v-model="form.password"
+          class="auth-input"
+          type="password"
+          required
+          autocomplete="new-password"
+          placeholder="至少 6 位"
+        />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700">确认密码</label>
-        <input v-model="form.confirmPassword" type="password" required autocomplete="new-password"
-               class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label class="auth-label" for="reg-confirm">确认密码</label>
+        <input
+          id="reg-confirm"
+          v-model="form.confirmPassword"
+          class="auth-input"
+          type="password"
+          required
+          autocomplete="new-password"
+          placeholder="再输入一次"
+        />
       </div>
-      <button type="submit" :disabled="loading"
-              class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50">
-        {{ loading ? '注册中...' : '注册' }}
+      <button class="auth-btn" type="submit" :disabled="loading">
+        {{ loading ? '注册中…' : '创建账号' }}
       </button>
     </form>
-    <p class="mt-4 text-center text-sm text-gray-600">
-      已有账号？<NuxtLink to="/login" class="text-blue-600 hover:underline">登录</NuxtLink>
+    <p class="auth-foot">
+      已有账号？
+      <NuxtLink to="/login">登录</NuxtLink>
     </p>
   </div>
 </template>
@@ -53,7 +81,6 @@ const handleRegister = async () => {
   try {
     const email = form.email.trim()
     await register(form.username.trim(), email, form.password)
-    // 注册成功后直接登录进首页（避免再填一遍又用错「用户名」）
     await login(email, form.password)
     router.push('/')
   } catch (e: any) {
