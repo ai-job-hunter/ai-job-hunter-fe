@@ -4,22 +4,22 @@
     <form @submit.prevent="handleRegister" class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700">用户名</label>
-        <input v-model="form.username" type="text" required
+        <input v-model="form.username" type="text" required autocomplete="nickname"
                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">邮箱</label>
-        <input v-model="form.email" type="email" required
+        <input v-model="form.email" type="email" required autocomplete="email"
                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">密码</label>
-        <input v-model="form.password" type="password" required
+        <input v-model="form.password" type="password" required autocomplete="new-password"
                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700">确认密码</label>
-        <input v-model="form.confirmPassword" type="password" required
+        <input v-model="form.confirmPassword" type="password" required autocomplete="new-password"
                class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
       </div>
       <button type="submit" :disabled="loading"
@@ -36,7 +36,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 
-const { register } = useAuth()
+const { register, login } = useAuth()
 const router = useRouter()
 
 const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
@@ -51,10 +51,13 @@ const handleRegister = async () => {
   loading.value = true
   error.value = ''
   try {
-    await register(form.username, form.email, form.password)
-    router.push('/login')
+    const email = form.email.trim()
+    await register(form.username.trim(), email, form.password)
+    // 注册成功后直接登录进首页（避免再填一遍又用错「用户名」）
+    await login(email, form.password)
+    router.push('/')
   } catch (e: any) {
-    error.value = e.data?.message || '注册失败'
+    error.value = e.data?.message || e.statusMessage || e.message || '注册失败'
   } finally {
     loading.value = false
   }
