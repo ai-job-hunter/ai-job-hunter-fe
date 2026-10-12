@@ -137,7 +137,7 @@ poetry run python -m src.main --mode server --port 8081
 
 **浏览器显示「危险」**：证书往往正常（Let's Encrypt）；常见是 SPA 写了 `try_files $uri $uri/`，Nginx 补斜杠 301 在 Traefik 后写成 `http://...`。正确写法：`try_files $uri /index.html`（不要 `$uri/`）。
 
-**「不安全」但「证书有效」**：多半当前页是 **http://**（密码框会标红），不是证书坏了。地址栏点开看协议；应打开 `https://...`。已用 HSTS 头减少再次落到 http。
+**Chrome「不安全」但 Safari/无痕正常**：多半是普通窗口站点缓存；清该站数据即可，服务端一般不用为这个加 HSTS。
 
 域名打不开时优先查：`.env` 的 `DOMAIN`、前端是否 `healthy`、Traefik 是否指到 80。
 
