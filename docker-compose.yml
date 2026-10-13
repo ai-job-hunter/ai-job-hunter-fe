@@ -13,6 +13,7 @@ services:
     restart: unless-stopped
     mem_limit: ${FE_MEM_LIMIT:-128m}
     mem_reservation: ${FE_MEM_RESERVATION:-32m}
+    cpus: ${FE_CPUS:-0.25}
     env_file:
       - .env
     expose:
@@ -46,6 +47,7 @@ services:
     restart: unless-stopped
     mem_limit: ${BE_MEM_LIMIT:-768m}
     mem_reservation: ${BE_MEM_RESERVATION:-256m}
+    cpus: ${BE_CPUS:-1.0}
     env_file:
       - .env
     environment:
