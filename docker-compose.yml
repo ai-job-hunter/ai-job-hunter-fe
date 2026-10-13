@@ -11,6 +11,8 @@ services:
     image: ghcr.io/${IMAGE_NAMESPACE}/ai-job-hunter-fe:${IMAGE_TAG:-latest}
     container_name: ai-job-hunter-fe
     restart: unless-stopped
+    mem_limit: ${FE_MEM_LIMIT:-128m}
+    mem_reservation: ${FE_MEM_RESERVATION:-32m}
     env_file:
       - .env
     expose:
@@ -48,9 +50,7 @@ services:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=70.0 -XX:InitialRAMPercentage=15.0 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC}
-      # 旧镜像 ENTRYPOINT 仍是 java -jar 时也生效（新镜像用 JAVA_OPTS）
-      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--XX:MaxRAMPercentage=70.0 -XX:MaxMetaspaceSize=192m -XX:+ExitOnOutOfMemoryError}
+      # JVM 参数统一在 Dockerfile ENV JAVA_OPTS；这里只限容器内存（mem_limit）
       PGSQL_HOST:     ${PGSQL_HOST}
       PGSQL_PORT:     ${PGSQL_PORT:-5432}
       PGSQL_DB:       ${PGSQL_DB}
