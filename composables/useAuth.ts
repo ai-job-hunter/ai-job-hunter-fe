@@ -1,16 +1,30 @@
 import type { ApiResponse, AuthData } from '~/types'
 
+function apiErrorMessage(e: unknown, fallback: string): string {
+  const anyErr = e as {
+    data?: { message?: string; code?: number }
+    statusMessage?: string
+    message?: string
+  }
+  return anyErr?.data?.message || anyErr?.statusMessage || anyErr?.message || fallback
+}
+
 export const useAuth = () => {
   const config = useRuntimeConfig()
 
   /** account：用户名或邮箱均可 */
   const login = async (account: string, password: string) => {
-    const res = await $fetch<ApiResponse<AuthData>>('/api/v1/auth/login', {
-      baseURL: config.public.apiBase || undefined,
-      method: 'POST',
-      // account 为主；email 兼容旧后端
-      body: { account, email: account, password },
-    })
+    let res: ApiResponse<AuthData>
+    try {
+      res = await $fetch<ApiResponse<AuthData>>('/api/v1/auth/login', {
+        baseURL: config.public.apiBase || undefined,
+        method: 'POST',
+        // account 为主；email 兼容旧后端
+        body: { account, email: account, password },
+      })
+    } catch (e) {
+      throw new Error(apiErrorMessage(e, '登录失败'))
+    }
     if (res.code !== 0 || !res.data?.token) {
       throw new Error(res.message || '登录失败')
     }
@@ -23,11 +37,16 @@ export const useAuth = () => {
   }
 
   const register = async (username: string, email: string, password: string) => {
-    const res = await $fetch<ApiResponse<unknown>>('/api/v1/auth/register', {
-      baseURL: config.public.apiBase || undefined,
-      method: 'POST',
-      body: { username, email, password },
-    })
+    let res: ApiResponse<unknown>
+    try {
+      res = await $fetch<ApiResponse<unknown>>('/api/v1/auth/register', {
+        baseURL: config.public.apiBase || undefined,
+        method: 'POST',
+        body: { username, email, password },
+      })
+    } catch (e) {
+      throw new Error(apiErrorMessage(e, '注册失败'))
+    }
     if (res.code !== 0) {
       throw new Error(res.message || '注册失败')
     }

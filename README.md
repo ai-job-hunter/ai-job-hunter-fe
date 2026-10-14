@@ -109,9 +109,28 @@ npm run dev
 
 本地开发：`API_BASE` 保持为空，请求走同源 `/api/*`，由 Nuxt vite 代理到 `http://127.0.0.1:8080`（与生产 Nginx 一致，后端不必开 CORS）。
 
-**登录可用用户名或邮箱**（请求字段 `account`）。注册成功后会自动登录进首页。
+**注意**：本机 `3000`/`8080` 若已被别的项目（如 pen-bloom）占用，请换端口，例如：
+
+```bash
+# 后端 IDEA 或 jar 用 8088；前端：
+NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
+```
+
+**登录可用用户名或邮箱**（请求字段 `account`）。注册成功后会自动登录进首页；若自动登录失败会跳到登录页并预填邮箱。
 
 登录/注册页采用 **黛青水墨** 视觉 + **lonely √3** 品牌标（见 `public/logo.svg`）。
+
+### 5.1 Playwright E2E（注册 / 登录）
+
+```bash
+cd ai-job-hunter-fe
+npm install
+npx playwright install chromium
+# 先保证 ai-job-hunter-be 已起，且 FE 代理指向它（勿指到别的项目）
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
+```
+
+用例：`e2e/auth.spec.ts`（注册后自动进首页、邮箱/用户名登录、错误密码）。策略说明见后端 `docs/09-TEST-STRATEGY.md` §1.3。
 
 ### 6. 启动 Python Agent
 

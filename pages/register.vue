@@ -64,7 +64,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 
-const { register, login } = useAuth()
+const { register, login, getToken } = useAuth()
 const router = useRouter()
 
 const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
@@ -76,15 +76,33 @@ const handleRegister = async () => {
     error.value = '两次密码不一致'
     return
   }
+  if (form.password.length < 6) {
+    error.value = '密码至少 6 位'
+    return
+  }
   loading.value = true
   error.value = ''
+  const email = form.email.trim()
+  const username = form.username.trim()
+  let registered = false
   try {
-    const email = form.email.trim()
-    await register(form.username.trim(), email, form.password)
+    await register(username, email, form.password)
+    registered = true
     await login(email, form.password)
-    router.push('/')
+    if (!getToken()) {
+      throw new Error('登录成功但未保存 token，请手动登录')
+    }
+    await router.push('/')
   } catch (e: any) {
-    error.value = e.data?.message || e.statusMessage || e.message || '注册失败'
+    const msg = e.data?.message || e.statusMessage || e.message || '注册失败'
+    error.value = msg
+    // 注册已成功、自动登录失败 → 去登录页预填邮箱，避免卡在注册页误以为没账号
+    if (registered) {
+      await navigateTo({
+        path: '/login',
+        query: { email, registered: '1', tip: '账号已创建，请登录' },
+      })
+    }
   } finally {
     loading.value = false
   }

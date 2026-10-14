@@ -53,6 +53,10 @@ onMounted(() => {
   if (typeof q === 'string' && q) {
     form.account = q
   }
+  const tip = route.query.tip
+  if (typeof tip === 'string' && tip) {
+    error.value = tip
+  }
 })
 
 const handleLogin = async () => {
@@ -60,7 +64,7 @@ const handleLogin = async () => {
   error.value = ''
   try {
     await login(form.account.trim(), form.password)
-    router.push('/')
+    await router.push('/')
   } catch (e: any) {
     error.value = e.data?.message || e.statusMessage || e.message || '登录失败'
   } finally {
