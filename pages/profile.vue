@@ -1,36 +1,47 @@
 <template>
   <div class="max-w-xl">
-    <h2 class="text-2xl font-semibold text-slate-800 mb-6">我的资料</h2>
-    <div v-if="error" class="mb-4 text-sm text-red-600" role="alert">{{ error }}</div>
-    <div v-if="ok" class="mb-4 text-sm text-emerald-700">已保存</div>
-    <form class="space-y-4 bg-white border border-slate-100 rounded-lg p-6 shadow-sm" @submit.prevent="save">
+    <h1 class="app-page-title">我的资料</h1>
+    <p class="app-page-desc">完善手机号与求职偏好，后续匹配会用到</p>
+
+    <div v-if="error" class="app-alert app-alert-error mb-4" role="alert">{{ error }}</div>
+    <div v-if="ok" class="app-alert app-alert-ok mb-4">已保存</div>
+
+    <form class="app-panel app-form-stack" @submit.prevent="save">
       <div>
-        <label class="block text-sm text-slate-600 mb-1">用户名</label>
-        <input class="w-full border rounded px-3 py-2 bg-slate-50" :value="form.username" disabled />
+        <label class="app-label">用户名</label>
+        <input class="app-input" :value="form.username" disabled />
       </div>
       <div>
-        <label class="block text-sm text-slate-600 mb-1">邮箱</label>
-        <input class="w-full border rounded px-3 py-2 bg-slate-50" :value="form.email" disabled />
+        <label class="app-label">邮箱</label>
+        <input class="app-input" :value="form.email" disabled />
       </div>
       <div>
-        <label class="block text-sm text-slate-600 mb-1">手机</label>
-        <input v-model="form.phone" class="w-full border rounded px-3 py-2" placeholder="可选" />
+        <label class="app-label" for="phone">手机</label>
+        <input id="phone" v-model="form.phone" class="app-input" placeholder="可选" />
       </div>
       <div>
-        <label class="block text-sm text-slate-600 mb-1">求职关键词（逗号分隔）</label>
-        <input v-model="keywordsText" class="w-full border rounded px-3 py-2" placeholder="Java, 后端" />
+        <label class="app-label" for="keywords">求职关键词</label>
+        <input
+          id="keywords"
+          v-model="keywordsText"
+          class="app-input"
+          placeholder="用逗号分隔，如 Java, 后端"
+        />
       </div>
       <div>
-        <label class="block text-sm text-slate-600 mb-1">意向城市（逗号分隔）</label>
-        <input v-model="citiesText" class="w-full border rounded px-3 py-2" placeholder="北京, 上海" />
+        <label class="app-label" for="cities">意向城市</label>
+        <input
+          id="cities"
+          v-model="citiesText"
+          class="app-input"
+          placeholder="用逗号分隔，如 北京, 上海"
+        />
       </div>
-      <button
-        type="submit"
-        class="bg-slate-900 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
-        :disabled="loading"
-      >
-        {{ loading ? '保存中…' : '保存' }}
-      </button>
+      <div>
+        <button class="app-btn" type="submit" :disabled="loading">
+          {{ loading ? '保存中…' : '保存资料' }}
+        </button>
+      </div>
     </form>
   </div>
 </template>

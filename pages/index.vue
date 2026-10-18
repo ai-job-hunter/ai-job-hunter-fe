@@ -1,24 +1,23 @@
 <template>
   <div>
-    <h2 class="text-2xl font-semibold text-slate-800 mb-6">仪表盘</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <NuxtLink
-        to="/resumes"
-        class="bg-white rounded-lg shadow-sm border border-slate-100 p-6 hover:border-slate-300 transition"
-      >
-        <h3 class="text-slate-500 text-sm">我的简历</h3>
-        <p class="text-3xl font-bold text-slate-900 mt-2">{{ resumeCount ?? '-' }}</p>
-        <p class="text-xs text-slate-400 mt-2">上传与管理简历 →</p>
+    <h1 class="app-page-title">仪表盘</h1>
+    <p class="app-page-desc">简历入库 → 粘贴 JD → AI 分析 / 匹配 / 打招呼</p>
+
+    <div class="app-tile-grid">
+      <NuxtLink to="/resumes" class="app-tile">
+        <h3>我的简历</h3>
+        <p class="num">{{ resumeCount ?? '—' }}</p>
+        <p class="hint">上传与管理 →</p>
       </NuxtLink>
-      <div class="bg-white rounded-lg shadow-sm border border-slate-100 p-6 opacity-70">
-        <h3 class="text-slate-500 text-sm">职位搜索</h3>
-        <p class="text-3xl font-bold text-slate-900 mt-2">-</p>
-        <p class="text-xs text-slate-400 mt-2">下一阶段开放</p>
-      </div>
-      <div class="bg-white rounded-lg shadow-sm border border-slate-100 p-6 opacity-70">
-        <h3 class="text-slate-500 text-sm">已申请</h3>
-        <p class="text-3xl font-bold text-slate-900 mt-2">-</p>
-        <p class="text-xs text-slate-400 mt-2">下一阶段开放</p>
+      <NuxtLink to="/jobs" class="app-tile">
+        <h3>我的岗位</h3>
+        <p class="num">{{ jobCount ?? '—' }}</p>
+        <p class="hint">粘贴 JD 分析 →</p>
+      </NuxtLink>
+      <div class="app-tile is-muted">
+        <h3>已申请</h3>
+        <p class="num">—</p>
+        <p class="hint">后续开放</p>
       </div>
     </div>
   </div>
@@ -29,13 +28,20 @@ definePageMeta({ layout: 'default', middleware: 'auth' })
 
 const { apiFetch } = useApi()
 const resumeCount = ref<number | null>(null)
+const jobCount = ref<number | null>(null)
 
 onMounted(async () => {
   try {
-    const data = await apiFetch<{ total?: number }>('/api/v1/resumes')
-    resumeCount.value = data?.total ?? 0
+    const resumes = await apiFetch<{ total?: number }>('/api/v1/resumes')
+    resumeCount.value = resumes?.total ?? 0
   } catch {
     resumeCount.value = null
+  }
+  try {
+    const jobs = await apiFetch<{ total?: number }>('/api/v1/jobs')
+    jobCount.value = jobs?.total ?? 0
+  } catch {
+    jobCount.value = null
   }
 })
 </script>

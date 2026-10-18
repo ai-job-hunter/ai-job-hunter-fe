@@ -1,66 +1,80 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-6 gap-4">
-      <h2 class="text-2xl font-semibold text-slate-800">我的简历</h2>
-    </div>
+    <h1 class="app-page-title">我的简历</h1>
+    <p class="app-page-desc">上传 PDF / TXT / Word，管理默认简历与解析结果</p>
 
-    <form
-      class="bg-white border border-slate-100 rounded-lg p-6 shadow-sm mb-8 space-y-4"
-      @submit.prevent="upload"
-    >
-      <h3 class="font-medium text-slate-800">上传简历</h3>
-      <div v-if="error" class="text-sm text-red-600" role="alert">{{ error }}</div>
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">名称</label>
-          <input v-model="form.name" required class="w-full border rounded px-3 py-2" placeholder="技术简历V1" />
-        </div>
-        <div>
-          <label class="block text-sm text-slate-600 mb-1">类型</label>
-          <select v-model="form.type" class="w-full border rounded px-3 py-2">
-            <option value="GENERAL">通用</option>
-            <option value="TECHNICAL">技术</option>
-            <option value="MANAGEMENT">管理</option>
-            <option value="CUSTOM">自定义</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label class="block text-sm text-slate-600 mb-1">文件（pdf / txt / doc / docx，≤10MB）</label>
-        <input type="file" accept=".pdf,.txt,.doc,.docx" required @change="onFile" />
-      </div>
-      <label class="inline-flex items-center gap-2 text-sm text-slate-600">
-        <input v-model="form.isDefault" type="checkbox" />
-        设为默认简历
-      </label>
-      <button
-        type="submit"
-        class="bg-slate-900 text-white px-4 py-2 rounded text-sm disabled:opacity-50"
-        :disabled="loading || !file"
-      >
-        {{ loading ? '上传中…' : '上传' }}
-      </button>
-    </form>
+    <section class="app-panel">
+      <h2 class="app-panel-title">上传新简历</h2>
+      <div v-if="error" class="app-alert app-alert-error mb-4" role="alert">{{ error }}</div>
 
-    <div v-if="items.length === 0" class="text-slate-500 text-sm">还没有简历，先上传一份吧。</div>
-    <ul class="space-y-3">
-      <li
-        v-for="item in items"
-        :key="item.id"
-        class="bg-white border border-slate-100 rounded-lg p-4 shadow-sm flex items-center justify-between gap-4"
-      >
-        <div>
-          <NuxtLink :to="`/resumes/${item.id}`" class="font-medium text-slate-900 hover:underline">
-            {{ item.name }}
-          </NuxtLink>
-          <p class="text-xs text-slate-500 mt-1">
-            {{ item.type }} · {{ item.status }}
-            <span v-if="item.isDefault" class="ml-2 text-emerald-600">默认</span>
-          </p>
+      <form class="app-form-stack" @submit.prevent="upload">
+        <label
+          class="app-drop"
+          :class="{ 'is-drag': dragging }"
+          @dragenter.prevent="dragging = true"
+          @dragover.prevent="dragging = true"
+          @dragleave.prevent="dragging = false"
+          @drop.prevent="onDrop"
+        >
+          <input type="file" accept=".pdf,.txt,.doc,.docx" @change="onFile" />
+          <span class="app-drop-title">{{ file ? '已选择文件' : '拖拽文件到这里，或点击选择' }}</span>
+          <span class="app-drop-hint">支持 pdf / txt / doc / docx，最大 10MB</span>
+          <span v-if="file" class="app-drop-file">{{ file.name }}</span>
+        </label>
+
+        <div class="app-field-grid">
+          <div>
+            <label class="app-label" for="resume-name">简历名称</label>
+            <input
+              id="resume-name"
+              v-model="form.name"
+              class="app-input"
+              required
+              placeholder="例如：技术简历 V1"
+            />
+          </div>
+          <div>
+            <label class="app-label" for="resume-type">类型</label>
+            <select id="resume-type" v-model="form.type" class="app-select">
+              <option value="GENERAL">通用</option>
+              <option value="TECHNICAL">技术</option>
+              <option value="MANAGEMENT">管理</option>
+              <option value="CUSTOM">自定义</option>
+            </select>
+          </div>
         </div>
-        <button type="button" class="text-sm text-red-600" @click="remove(item.id)">删除</button>
-      </li>
-    </ul>
+
+        <label class="app-check">
+          <input v-model="form.isDefault" type="checkbox" />
+          设为默认简历
+        </label>
+
+        <div>
+          <button class="app-btn" type="submit" :disabled="loading || !file">
+            {{ loading ? '上传中…' : '开始上传' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <section class="app-panel">
+      <h2 class="app-panel-title">已上传</h2>
+      <p v-if="items.length === 0" class="app-page-desc" style="margin: 0">
+        还没有简历，上传一份开始吧。
+      </p>
+      <ul v-else class="app-list">
+        <li v-for="item in items" :key="item.id" class="app-list-item">
+          <div>
+            <NuxtLink :to="`/resumes/${item.id}`">{{ item.name }}</NuxtLink>
+            <p class="app-meta">
+              {{ typeLabel(item.type) }} · {{ statusLabel(item.status) }}
+              <span v-if="item.isDefault" class="app-badge">默认</span>
+            </p>
+          </div>
+          <button type="button" class="app-link-danger" @click="remove(item.id)">删除</button>
+        </li>
+      </ul>
+    </section>
   </div>
 </template>
 
@@ -81,18 +95,35 @@ const file = ref<File | null>(null)
 const form = reactive({ name: '', type: 'TECHNICAL', isDefault: true })
 const loading = ref(false)
 const error = ref('')
+const dragging = ref(false)
 
-const load = async () => {
-  const data = await apiFetch<{ items?: ResumeItem[] }>('/api/v1/resumes')
-  items.value = data?.items || []
+const typeLabel = (t?: string) =>
+  ({ GENERAL: '通用', TECHNICAL: '技术', MANAGEMENT: '管理', CUSTOM: '自定义' } as Record<string, string>)[t || ''] || t || '-'
+
+const statusLabel = (s?: string) =>
+  ({ UPLOADED: '已上传', PARSED: '已解析', ANALYZED: '已分析', FAILED: '失败' } as Record<string, string>)[s || ''] || s || '-'
+
+const pickFile = (f: File | null | undefined) => {
+  if (!f) return
+  file.value = f
+  if (!form.name) {
+    form.name = f.name.replace(/\.[^.]+$/, '')
+  }
 }
 
 const onFile = (e: Event) => {
   const input = e.target as HTMLInputElement
-  file.value = input.files?.[0] || null
-  if (file.value && !form.name) {
-    form.name = file.value.name.replace(/\.[^.]+$/, '')
-  }
+  pickFile(input.files?.[0])
+}
+
+const onDrop = (e: DragEvent) => {
+  dragging.value = false
+  pickFile(e.dataTransfer?.files?.[0])
+}
+
+const load = async () => {
+  const data = await apiFetch<{ items?: ResumeItem[] }>('/api/v1/resumes')
+  items.value = data?.items || []
 }
 
 const upload = async () => {

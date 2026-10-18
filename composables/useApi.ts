@@ -35,7 +35,9 @@ export const useApi = () => {
       }
       return res.data
     } catch (e: any) {
-      if (e?.statusCode === 401 || e?.status === 401) {
+      const status = e?.statusCode ?? e?.status ?? e?.response?.status
+      // 无 JWT / 过期 token：Spring 默认曾回 403；现统一 401。两者都清登录态
+      if (status === 401 || status === 403) {
         logout()
       }
       const msg = e?.data?.message || e?.message || '请求失败'
