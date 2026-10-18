@@ -143,7 +143,11 @@ npx playwright install chromium
 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
 ```
 
-用例：`e2e/auth.spec.ts`（注册后自动进首页、邮箱/用户名登录、错误密码）。策略说明见后端 `docs/09-TEST-STRATEGY.md` §1.3。
+用例：
+- `e2e/auth.spec.ts`：注册后自动进首页、邮箱/用户名登录、错误密码
+- `e2e/jobs.spec.ts`：登录 → 粘贴 JD → 列表/详情（前后端打通）
+
+策略与 CI 门禁见后端 `docs/09-TEST-STRATEGY.md` §1.3。每个功能本地须 `*LiveIT` + `npm run test:e2e` 通过后再开下一任务。
 
 ### 6. 启动 Python Agent
 

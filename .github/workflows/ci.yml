@@ -1,0 +1,55 @@
+# =============================================================================
+# AI Job Hunter Frontend - CI
+# 构建校验 +（可选）Playwright E2E：需仓库 Variables 打开 E2E_WITH_BACKEND
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Generate static (与生产 Dockerfile 一致)
+        env:
+          API_BASE: ''
+        run: npm run generate
+
+  # 默认跳过：完整打通需后端镜像 + PG/Redis，成本高；本地门禁仍强制跑 npm run test:e2e
+  e2e:
+    name: Playwright E2E (optional)
+    if: vars.E2E_WITH_BACKEND == 'true'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - name: E2E against external stack
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ vars.E2E_BASE_URL }}
+          NUXT_DEV_PROXY_TARGET: ${{ vars.E2E_API_BASE }}
+        run: npm run test:e2e
