@@ -11,6 +11,10 @@
             <NuxtLink to="/">仪表盘</NuxtLink>
             <NuxtLink to="/resumes">简历</NuxtLink>
             <NuxtLink to="/jobs">岗位</NuxtLink>
+            <NuxtLink to="/conversations">沟通</NuxtLink>
+            <NuxtLink to="/applications">投递</NuxtLink>
+            <NuxtLink to="/stats">统计</NuxtLink>
+            <NuxtLink to="/settings">设置</NuxtLink>
             <NuxtLink to="/profile">我的</NuxtLink>
           </nav>
         </div>

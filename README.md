@@ -122,11 +122,16 @@ NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
 
 | 路径 | 功能 |
 |------|------|
-| `/` | 仪表盘（简历 / 岗位数量） |
+| `/` | 仪表盘（简历 / 岗位 / 沟通 / 投递） |
 | `/resumes` | 简历上传 / 列表 / 删除 |
-| `/resumes/:id` | 简历详情（解析数据） |
+| `/resumes/:id` | 简历详情（解析 + AI 分析/优化建议） |
 | `/jobs` | 粘贴 JD 创建岗位 / 列表 |
-| `/jobs/:id` | 岗位详情：AI 分析、匹配、打招呼 |
+| `/jobs/:id` | 岗位详情：AI 分析、匹配、打招呼、标记投递 |
+| `/conversations` | 手动创建与 HR 的对话 |
+| `/conversations/:id` | 消息录入 + AI 推荐回复 |
+| `/applications` | 投递看板（状态推进） |
+| `/stats` | 今日概览 / 漏斗 / 趋势 / AI 周报 |
+| `/settings` | 打招呼模板 + 黑名单 |
 | `/profile` | 手机号、求职关键词、意向城市 |
 
 登录/注册页采用 **黛青水墨** 视觉 + **lonely √3** 品牌标（见 `public/logo.svg`）。登录后仪表盘 / 简历上传 / 资料页使用同一套 `--ink-*` 纸面风格（拖拽上传区、统一面板与列表），样式类在 `assets/css/main.css` 的 `.app-*`。
@@ -146,6 +151,9 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
 用例：
 - `e2e/auth.spec.ts`：注册后自动进首页、邮箱/用户名登录、错误密码
 - `e2e/jobs.spec.ts`：登录 → 粘贴 JD → 列表/详情（前后端打通）
+- `e2e/resume-ai.spec.ts`：上传 txt → AI 分析
+- `e2e/conversations.spec.ts`：创建对话 → 详情 → 投递看板
+- `e2e/stats.spec.ts`：仪表盘今日 → 统计页 → 设置模板/黑名单
 
 策略与 CI 门禁见后端 `docs/09-TEST-STRATEGY.md` §1.3。每个功能本地须 `*LiveIT` + `npm run test:e2e` 通过后再开下一任务。
 

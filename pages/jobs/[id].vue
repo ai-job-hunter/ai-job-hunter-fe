@@ -32,6 +32,9 @@
             <button class="app-btn app-btn-ghost" type="button" :disabled="busy" @click="doGreet">
               {{ busy === 'greet' ? '生成中…' : '生成打招呼' }}
             </button>
+            <button class="app-btn" type="button" :disabled="busy || !resumeId" @click="doApply">
+              {{ busy === 'apply' ? '投递中…' : '标记已投递' }}
+            </button>
           </div>
         </div>
         <div v-if="okMsg" class="app-alert app-alert-ok mt-4">{{ okMsg }}</div>
@@ -179,6 +182,25 @@ const doGreet = async () => {
     okMsg.value = '话术已生成'
   } catch (e: any) {
     error.value = e.message || '生成失败'
+  } finally {
+    busy.value = ''
+  }
+}
+
+const doApply = async () => {
+  if (!resumeId.value) return
+  busy.value = 'apply'
+  error.value = ''
+  okMsg.value = ''
+  try {
+    await apiFetch('/api/v1/applications', {
+      method: 'POST',
+      body: { jobId: route.params.id, resumeId: resumeId.value },
+    })
+    await load()
+    okMsg.value = '已记入投递看板'
+  } catch (e: any) {
+    error.value = e.message || '投递失败'
   } finally {
     busy.value = ''
   }
