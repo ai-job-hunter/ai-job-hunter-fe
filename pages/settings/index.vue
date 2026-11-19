@@ -1,7 +1,9 @@
 <template>
   <div>
     <h1 class="app-page-title">策略设置</h1>
-    <p class="app-page-desc">打招呼模板与黑名单（本地记录，不自动爬岗位）</p>
+    <p class="app-page-desc">
+      打招呼模板与黑名单（本地记录）。设为默认的模板会在「生成打招呼」时优先使用；黑名单公司/关键词会拦截新建岗位。
+    </p>
     <div v-if="error" class="app-alert app-alert-error" role="alert">{{ error }}</div>
     <div v-if="okMsg" class="app-alert app-alert-ok" role="status">{{ okMsg }}</div>
 
