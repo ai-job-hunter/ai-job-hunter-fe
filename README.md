@@ -108,7 +108,7 @@ NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
 | 路径 | 功能 |
 |------|------|
 | `/` | 仪表盘（简历 / 岗位 / 沟通 / 投递） |
-| `/resumes` | 简历上传 / 列表 / 删除（txt / PDF 可抽文本） |
+| `/resumes` | 简历上传 / 列表 / 删除（txt / PDF / Word 可抽文本） |
 | `/resumes/:id` | 简历详情（解析 + AI 分析/优化建议） |
 | `/jobs` | 粘贴 JD 创建岗位 / 列表 |
 | `/jobs/:id` | 岗位详情：AI 分析、匹配、打招呼、标记投递 |
@@ -142,14 +142,9 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
 
 策略与 CI 门禁见后端 `docs/09-TEST-STRATEGY.md` §1.3。每个功能本地须 `*LiveIT` + `npm run test:e2e` 通过后再开下一任务。
 
-### 6. 启动 Python Agent
+### 6. Python Agent（V2，当前不要启）
 
-```bash
-cd ai-job-hunter-agent
-poetry install
-poetry run playwright install chromium
-poetry run python -m src.main --mode server --port 8081
-```
+V1 **没有** BOSS 浏览器自动化。`ai-job-hunter-agent` 仓库若存在，仅作后续规划，本地求职流程不依赖它。
 
 ## 生产部署（方案 A，对齐 cogniforge-web）
 
@@ -189,6 +184,7 @@ poetry run python -m src.main --mode server --port 8081
 | [07-FRONTEND-SPECIFICATION.md](docs/07-FRONTEND-SPECIFICATION.md) | 前端规范 |
 | [08-DEVELOPMENT-PLAN.md](docs/08-DEVELOPMENT-PLAN.md) | 开发计划 |
 | [09-TEST-STRATEGY.md](docs/09-TEST-STRATEGY.md) | 测试策略 |
+| [11-SPRINT6-TEST-REPORT.md](docs/11-SPRINT6-TEST-REPORT.md) | V1 测试与发布报告（在 be 仓） |
 
 ## 开发指南
 
