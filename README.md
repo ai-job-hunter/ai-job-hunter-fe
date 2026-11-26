@@ -5,6 +5,7 @@
 ## [变更记录]
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |---|---|---|-----|
+| 2026-11-26 | v1.3 | 资料页支持修改密码 | orjrs |
 | 2026-11-26 | v1.2 | 投递看板支持时间线备注 | orjrs |
 | 2026-11-26 | v1.1 | 升级 Nuxt 3 → 4.7；CI Node 22；`package.json` 声明 `type: module` | orjrs |
 | 2026-11-23 | v1.0 | V1 说明书与范围说明 | orjrs |
@@ -131,7 +132,7 @@ NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
 | `/applications` | 投递看板（状态推进 + 时间线备注） |
 | `/stats` | 今日概览 / 漏斗 / 趋势 / AI 周报 |
 | `/settings` | 打招呼模板 + 黑名单 |
-| `/profile` | 手机号、求职关键词、意向城市 |
+| `/profile` | 手机号、求职关键词、意向城市、**修改密码** |
 
 登录/注册页采用 **黛青水墨** 视觉 + **lonely √3** 品牌标（见 `public/logo.svg`）。登录后仪表盘 / 简历上传 / 资料页使用同一套 `--ink-*` 纸面风格（拖拽上传区、统一面板与列表），样式类在 `assets/css/main.css` 的 `.app-*`。
 
@@ -153,6 +154,7 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
 - `e2e/resume-ai.spec.ts`：上传 txt → AI 分析
 - `e2e/conversations.spec.ts`：创建对话 → 详情 → 投递看板
 - `e2e/stats.spec.ts`：仪表盘今日 → 统计页 → 设置模板/黑名单
+- `e2e/profile.spec.ts`：资料保存 + 改密码错误旧密提示
 
 策略与 CI 门禁见后端 `docs/09-TEST-STRATEGY.md` §1.3。每个功能本地须 `*LiveIT` + `npm run test:e2e` 通过后再开下一任务。
 

@@ -1,10 +1,11 @@
 <template>
   <div class="max-w-xl">
     <h1 class="app-page-title">我的资料</h1>
-    <p class="app-page-desc">完善手机号与求职偏好，后续匹配会用到</p>
+    <p class="app-page-desc">完善手机号与求职偏好，也可在此修改登录密码</p>
 
     <div v-if="error" class="app-alert app-alert-error mb-4" role="alert">{{ error }}</div>
     <div v-if="ok" class="app-alert app-alert-ok mb-4">已保存</div>
+    <div v-if="pwdOk" class="app-alert app-alert-ok mb-4">密码已更新，请用新密码重新登录</div>
 
     <form class="app-panel app-form-stack" @submit.prevent="save">
       <div>
@@ -43,6 +44,51 @@
         </button>
       </div>
     </form>
+
+    <form class="app-panel app-form-stack pwd-panel" @submit.prevent="changePassword">
+      <h2 class="pwd-title">修改密码</h2>
+      <div>
+        <label class="app-label" for="current-password">当前密码</label>
+        <input
+          id="current-password"
+          v-model="pwd.current"
+          class="app-input"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+      <div>
+        <label class="app-label" for="new-password">新密码</label>
+        <input
+          id="new-password"
+          v-model="pwd.next"
+          class="app-input"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+          placeholder="至少 8 位"
+        />
+      </div>
+      <div>
+        <label class="app-label" for="confirm-password">确认新密码</label>
+        <input
+          id="confirm-password"
+          v-model="pwd.confirm"
+          class="app-input"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
+          required
+        />
+      </div>
+      <div>
+        <button class="app-btn" type="submit" :disabled="pwdLoading">
+          {{ pwdLoading ? '提交中…' : '更新密码' }}
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -64,6 +110,10 @@ const loading = ref(false)
 const error = ref('')
 const ok = ref(false)
 
+const pwd = reactive({ current: '', next: '', confirm: '' })
+const pwdLoading = ref(false)
+const pwdOk = ref(false)
+
 onMounted(async () => {
   try {
     const me = await apiFetch<Profile>('/api/v1/users/me')
@@ -84,6 +134,7 @@ const save = async () => {
   loading.value = true
   error.value = ''
   ok.value = false
+  pwdOk.value = false
   try {
     await apiFetch('/api/v1/users/me', {
       method: 'PUT',
@@ -102,4 +153,45 @@ const save = async () => {
     loading.value = false
   }
 }
+
+const changePassword = async () => {
+  pwdLoading.value = true
+  error.value = ''
+  ok.value = false
+  pwdOk.value = false
+  if (pwd.next !== pwd.confirm) {
+    error.value = '两次输入的新密码不一致'
+    pwdLoading.value = false
+    return
+  }
+  try {
+    await apiFetch('/api/v1/users/me/password', {
+      method: 'PUT',
+      body: {
+        currentPassword: pwd.current,
+        newPassword: pwd.next,
+      },
+    })
+    pwd.current = ''
+    pwd.next = ''
+    pwd.confirm = ''
+    pwdOk.value = true
+  } catch (e: any) {
+    error.value = e.message || '修改密码失败'
+  } finally {
+    pwdLoading.value = false
+  }
+}
 </script>
+
+<style scoped>
+.pwd-panel {
+  margin-top: 1.25rem;
+}
+.pwd-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink-dai);
+}
+</style>
