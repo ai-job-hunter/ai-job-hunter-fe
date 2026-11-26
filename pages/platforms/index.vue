@@ -343,7 +343,7 @@ const createTask = async () => {
       body,
     })
     ok.value =
-      action.value === 'SUGGEST_REPLY' ? '已生成推荐，请确认后复制' : '任务已创建，请确认'
+      action.value === 'SUGGEST_REPLY' ? '已生成推荐，确认后会记入会话并复制' : '任务已创建，请确认'
     if (action.value === 'SYNC_JOBS') jobJd.value = ''
     if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') draftText.value = ''
     if (action.value === 'MARK_APPLIED') applyNote.value = ''
