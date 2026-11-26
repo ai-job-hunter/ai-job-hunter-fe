@@ -15,6 +15,7 @@
             <NuxtLink to="/applications">投递</NuxtLink>
             <NuxtLink to="/stats">统计</NuxtLink>
             <NuxtLink to="/settings">设置</NuxtLink>
+            <NuxtLink to="/platforms">平台</NuxtLink>
             <NuxtLink to="/profile">我的</NuxtLink>
           </nav>
         </div>
