@@ -48,6 +48,7 @@
           <option value="FILL_REPLY">复制回复话术</option>
           <option value="MARK_APPLIED">标记已投递（写入看板）</option>
           <option value="IMPORT_CHAT">导入会话（粘贴聊天）</option>
+          <option value="SUGGEST_REPLY">AI 推荐回复并复制</option>
         </select>
       </div>
       <template v-if="action === 'SYNC_JOBS'">
@@ -138,6 +139,18 @@
           />
         </div>
       </template>
+      <template v-else-if="action === 'SUGGEST_REPLY'">
+        <div class="row">
+          <label class="app-label" for="suggest-conv">会话</label>
+          <select id="suggest-conv" v-model="suggestConvId" class="app-select" required>
+            <option value="">请选择</option>
+            <option v-for="c in conversations" :key="c.id" :value="c.id">
+              {{ c.hrName || 'HR' }}{{ c.job?.title ? ` · ${c.job.title}` : '' }}
+            </option>
+          </select>
+        </div>
+        <p v-if="!conversations.length" class="app-meta">请先导入或创建会话。</p>
+      </template>
       <button
         type="button"
         class="app-btn"
@@ -147,7 +160,8 @@
           (action === 'SYNC_JOBS' && !jobJd.trim()) ||
           ((action === 'DRAFT_GREET' || action === 'FILL_REPLY') && !draftText.trim()) ||
           (action === 'MARK_APPLIED' && (!applyJobId || !applyResumeId)) ||
-          (action === 'IMPORT_CHAT' && !chatText.trim())
+          (action === 'IMPORT_CHAT' && !chatText.trim()) ||
+          (action === 'SUGGEST_REPLY' && !suggestConvId)
         "
         @click="createTask"
       >
@@ -161,6 +175,7 @@
             <span class="app-badge">{{ t.status }}</span>
           </div>
           <p v-if="t.request?.hint" class="app-meta">{{ t.request.hint }}</p>
+          <p v-if="t.request?.suggestedPreview" class="app-meta">预览：{{ t.request.suggestedPreview }}</p>
           <p v-if="t.result?.message" class="app-meta">{{ t.result.message }}</p>
           <NuxtLink
             v-if="t.result?.jobId && t.action !== 'MARK_APPLIED'"
@@ -207,7 +222,7 @@ type Task = {
   id: string
   action?: string
   status?: string
-  request?: { hint?: string }
+  request?: { hint?: string; suggestedPreview?: string }
   result?: {
     message?: string
     jobId?: string
@@ -218,12 +233,14 @@ type Task = {
 }
 type JobOpt = { id: string; title?: string; companyName?: string }
 type ResumeOpt = { id: string; name?: string; fileName?: string }
+type ConvOpt = { id: string; hrName?: string; job?: { title?: string } }
 
 const { apiFetch } = useApi()
 const connections = ref<Conn[]>([])
 const tasks = ref<Task[]>([])
 const jobs = ref<JobOpt[]>([])
 const resumes = ref<ResumeOpt[]>([])
+const conversations = ref<ConvOpt[]>([])
 const selectedConn = ref('')
 const action = ref('SYNC_JOBS')
 const jobTitle = ref('')
@@ -236,26 +253,30 @@ const applyNote = ref('')
 const chatHrName = ref('')
 const chatJobId = ref('')
 const chatText = ref('')
+const suggestConvId = ref('')
 const busy = ref('')
 const error = ref('')
 const ok = ref('')
 
 const load = async () => {
-  const [c, t, j, r] = await Promise.all([
+  const [c, t, j, r, conv] = await Promise.all([
     apiFetch<{ items?: Conn[] }>('/api/v1/platforms/connections'),
     apiFetch<{ items?: Task[] }>('/api/v1/platforms/tasks'),
     apiFetch<{ items?: JobOpt[] }>('/api/v1/jobs'),
     apiFetch<{ items?: ResumeOpt[] }>('/api/v1/resumes'),
+    apiFetch<{ items?: ConvOpt[] }>('/api/v1/conversations'),
   ])
   connections.value = c?.items || []
   tasks.value = t?.items || []
   jobs.value = j?.items || []
   resumes.value = r?.items || []
+  conversations.value = conv?.items || []
   if (!selectedConn.value && connections.value[0]) {
     selectedConn.value = connections.value[0].id
   }
   if (!applyJobId.value && jobs.value[0]) applyJobId.value = jobs.value[0].id
   if (!applyResumeId.value && resumes.value[0]) applyResumeId.value = resumes.value[0].id
+  if (!suggestConvId.value && conversations.value[0]) suggestConvId.value = conversations.value[0].id
 }
 
 onMounted(async () => {
@@ -314,11 +335,15 @@ const createTask = async () => {
       if (chatHrName.value.trim()) body.hrName = chatHrName.value.trim()
       if (chatJobId.value) body.jobId = chatJobId.value
     }
+    if (action.value === 'SUGGEST_REPLY') {
+      body.conversationId = suggestConvId.value
+    }
     await apiFetch('/api/v1/platforms/tasks', {
       method: 'POST',
       body,
     })
-    ok.value = '任务已创建，请确认'
+    ok.value =
+      action.value === 'SUGGEST_REPLY' ? '已生成推荐，请确认后复制' : '任务已创建，请确认'
     if (action.value === 'SYNC_JOBS') jobJd.value = ''
     if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') draftText.value = ''
     if (action.value === 'MARK_APPLIED') applyNote.value = ''
