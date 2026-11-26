@@ -46,7 +46,7 @@
           <option value="SYNC_JOBS">导入岗位（粘贴 JD）</option>
           <option value="DRAFT_GREET">复制打招呼话术</option>
           <option value="FILL_REPLY">复制回复话术</option>
-          <option value="MARK_APPLIED">标记已投递（mock）</option>
+          <option value="MARK_APPLIED">标记已投递（写入看板）</option>
         </select>
       </div>
       <template v-if="action === 'SYNC_JOBS'">
@@ -83,6 +83,33 @@
           />
         </div>
       </template>
+      <template v-else-if="action === 'MARK_APPLIED'">
+        <div class="row">
+          <label class="app-label" for="apply-job">岗位</label>
+          <select id="apply-job" v-model="applyJobId" class="app-select" required>
+            <option value="">请选择</option>
+            <option v-for="j in jobs" :key="j.id" :value="j.id">
+              {{ j.title || '未命名' }}{{ j.companyName ? ` · ${j.companyName}` : '' }}
+            </option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="app-label" for="apply-resume">简历</label>
+          <select id="apply-resume" v-model="applyResumeId" class="app-select" required>
+            <option value="">请选择</option>
+            <option v-for="r in resumes" :key="r.id" :value="r.id">
+              {{ r.name || r.fileName || r.id }}
+            </option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="app-label" for="apply-note">备注（可选）</label>
+          <input id="apply-note" v-model="applyNote" class="app-input" placeholder="如：已在 App 投递" />
+        </div>
+        <p v-if="!jobs.length || !resumes.length" class="app-meta">
+          需要先有岗位和简历，才能标记投递。
+        </p>
+      </template>
       <button
         type="button"
         class="app-btn"
@@ -90,7 +117,8 @@
           busy === 'task' ||
           !selectedConn ||
           (action === 'SYNC_JOBS' && !jobJd.trim()) ||
-          ((action === 'DRAFT_GREET' || action === 'FILL_REPLY') && !draftText.trim())
+          ((action === 'DRAFT_GREET' || action === 'FILL_REPLY') && !draftText.trim()) ||
+          (action === 'MARK_APPLIED' && (!applyJobId || !applyResumeId))
         "
         @click="createTask"
       >
@@ -106,11 +134,18 @@
           <p v-if="t.request?.hint" class="app-meta">{{ t.request.hint }}</p>
           <p v-if="t.result?.message" class="app-meta">{{ t.result.message }}</p>
           <NuxtLink
-            v-if="t.result?.jobId"
+            v-if="t.result?.jobId && t.action !== 'MARK_APPLIED'"
             class="app-btn app-btn-ghost"
             :to="`/jobs/${t.result.jobId}`"
           >
             查看已导入岗位
+          </NuxtLink>
+          <NuxtLink
+            v-if="t.result?.applicationId"
+            class="app-btn app-btn-ghost"
+            to="/applications"
+          >
+            查看投递看板
           </NuxtLink>
           <button
             v-if="t.status === 'NEED_CONFIRM' || t.status === 'PENDING'"
@@ -137,32 +172,45 @@ type Task = {
   action?: string
   status?: string
   request?: { hint?: string }
-  result?: { message?: string; jobId?: string; clipboardText?: string }
+  result?: { message?: string; jobId?: string; clipboardText?: string; applicationId?: string }
 }
+type JobOpt = { id: string; title?: string; companyName?: string }
+type ResumeOpt = { id: string; name?: string; fileName?: string }
 
 const { apiFetch } = useApi()
 const connections = ref<Conn[]>([])
 const tasks = ref<Task[]>([])
+const jobs = ref<JobOpt[]>([])
+const resumes = ref<ResumeOpt[]>([])
 const selectedConn = ref('')
 const action = ref('SYNC_JOBS')
 const jobTitle = ref('')
 const jobCompany = ref('')
 const jobJd = ref('')
 const draftText = ref('')
+const applyJobId = ref('')
+const applyResumeId = ref('')
+const applyNote = ref('')
 const busy = ref('')
 const error = ref('')
 const ok = ref('')
 
 const load = async () => {
-  const [c, t] = await Promise.all([
+  const [c, t, j, r] = await Promise.all([
     apiFetch<{ items?: Conn[] }>('/api/v1/platforms/connections'),
     apiFetch<{ items?: Task[] }>('/api/v1/platforms/tasks'),
+    apiFetch<{ items?: JobOpt[] }>('/api/v1/jobs'),
+    apiFetch<{ items?: ResumeOpt[] }>('/api/v1/resumes'),
   ])
   connections.value = c?.items || []
   tasks.value = t?.items || []
+  jobs.value = j?.items || []
+  resumes.value = r?.items || []
   if (!selectedConn.value && connections.value[0]) {
     selectedConn.value = connections.value[0].id
   }
+  if (!applyJobId.value && jobs.value[0]) applyJobId.value = jobs.value[0].id
+  if (!applyResumeId.value && resumes.value[0]) applyResumeId.value = resumes.value[0].id
 }
 
 onMounted(async () => {
@@ -211,6 +259,11 @@ const createTask = async () => {
     if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') {
       body.draftText = draftText.value.trim()
     }
+    if (action.value === 'MARK_APPLIED') {
+      body.jobId = applyJobId.value
+      body.resumeId = applyResumeId.value
+      if (applyNote.value.trim()) body.applyNote = applyNote.value.trim()
+    }
     await apiFetch('/api/v1/platforms/tasks', {
       method: 'POST',
       body,
@@ -218,6 +271,7 @@ const createTask = async () => {
     ok.value = '任务已创建，请确认'
     if (action.value === 'SYNC_JOBS') jobJd.value = ''
     if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') draftText.value = ''
+    if (action.value === 'MARK_APPLIED') applyNote.value = ''
     await load()
   } catch (e: any) {
     error.value = e.message || '创建任务失败'
