@@ -5,6 +5,7 @@
 ## [变更记录]
 | 日期 | 版本 | 变更摘要 | 负责人 |
 |---|---|---|-----|
+| 2026-11-26 | v1.2 | 投递看板支持时间线备注 | orjrs |
 | 2026-11-26 | v1.1 | 升级 Nuxt 3 → 4.7；CI Node 22；`package.json` 声明 `type: module` | orjrs |
 | 2026-11-23 | v1.0 | V1 说明书与范围说明 | orjrs |
 
@@ -126,7 +127,7 @@ NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
 | `/jobs/:id` | 岗位详情：AI 分析、匹配、打招呼、标记投递 |
 | `/conversations` | 手动创建与 HR 的对话 |
 | `/conversations/:id` | 消息录入 + AI 推荐回复 |
-| `/applications` | 投递看板（状态推进） |
+| `/applications` | 投递看板（状态推进 + 时间线备注） |
 | `/stats` | 今日概览 / 漏斗 / 趋势 / AI 周报 |
 | `/settings` | 打招呼模板 + 黑名单 |
 | `/profile` | 手机号、求职关键词、意向城市 |

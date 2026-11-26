@@ -40,5 +40,6 @@ test.describe('沟通与投递看板', () => {
     await page.goto('/applications')
     await expect(page.getByRole('heading', { name: '投递看板' })).toBeVisible()
     await expect(page.getByText('已投递').first()).toBeVisible()
+    await expect(page.getByText('写下时间线备注')).toBeVisible()
   })
 })
