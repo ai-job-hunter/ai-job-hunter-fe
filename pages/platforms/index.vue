@@ -47,6 +47,7 @@
           <option value="DRAFT_GREET">复制打招呼话术</option>
           <option value="FILL_REPLY">复制回复话术</option>
           <option value="MARK_APPLIED">标记已投递（写入看板）</option>
+          <option value="IMPORT_CHAT">导入会话（粘贴聊天）</option>
         </select>
       </div>
       <template v-if="action === 'SYNC_JOBS'">
@@ -110,6 +111,33 @@
           需要先有岗位和简历，才能标记投递。
         </p>
       </template>
+      <template v-else-if="action === 'IMPORT_CHAT'">
+        <div class="row">
+          <label class="app-label" for="chat-hr">HR 称呼（可选）</label>
+          <input id="chat-hr" v-model="chatHrName" class="app-input" placeholder="如 张女士" />
+        </div>
+        <div class="row">
+          <label class="app-label" for="chat-job">关联岗位（可选）</label>
+          <select id="chat-job" v-model="chatJobId" class="app-select">
+            <option value="">不关联</option>
+            <option v-for="j in jobs" :key="j.id" :value="j.id">
+              {{ j.title || '未命名' }}{{ j.companyName ? ` · ${j.companyName}` : '' }}
+            </option>
+          </select>
+        </div>
+        <div class="row">
+          <label class="app-label" for="chat-text">聊天原文</label>
+          <textarea
+            id="chat-text"
+            v-model="chatText"
+            class="app-input"
+            rows="6"
+            required
+            placeholder="每行一条。可写：&#10;HR: 您好，方便聊聊吗？&#10;我: 方便的，请问…
+无前缀的行默认当作 HR 消息"
+          />
+        </div>
+      </template>
       <button
         type="button"
         class="app-btn"
@@ -118,7 +146,8 @@
           !selectedConn ||
           (action === 'SYNC_JOBS' && !jobJd.trim()) ||
           ((action === 'DRAFT_GREET' || action === 'FILL_REPLY') && !draftText.trim()) ||
-          (action === 'MARK_APPLIED' && (!applyJobId || !applyResumeId))
+          (action === 'MARK_APPLIED' && (!applyJobId || !applyResumeId)) ||
+          (action === 'IMPORT_CHAT' && !chatText.trim())
         "
         @click="createTask"
       >
@@ -147,6 +176,13 @@
           >
             查看投递看板
           </NuxtLink>
+          <NuxtLink
+            v-if="t.result?.conversationId"
+            class="app-btn app-btn-ghost"
+            :to="`/conversations/${t.result.conversationId}`"
+          >
+            查看已导入会话
+          </NuxtLink>
           <button
             v-if="t.status === 'NEED_CONFIRM' || t.status === 'PENDING'"
             type="button"
@@ -172,7 +208,13 @@ type Task = {
   action?: string
   status?: string
   request?: { hint?: string }
-  result?: { message?: string; jobId?: string; clipboardText?: string; applicationId?: string }
+  result?: {
+    message?: string
+    jobId?: string
+    clipboardText?: string
+    applicationId?: string
+    conversationId?: string
+  }
 }
 type JobOpt = { id: string; title?: string; companyName?: string }
 type ResumeOpt = { id: string; name?: string; fileName?: string }
@@ -191,6 +233,9 @@ const draftText = ref('')
 const applyJobId = ref('')
 const applyResumeId = ref('')
 const applyNote = ref('')
+const chatHrName = ref('')
+const chatJobId = ref('')
+const chatText = ref('')
 const busy = ref('')
 const error = ref('')
 const ok = ref('')
@@ -264,6 +309,11 @@ const createTask = async () => {
       body.resumeId = applyResumeId.value
       if (applyNote.value.trim()) body.applyNote = applyNote.value.trim()
     }
+    if (action.value === 'IMPORT_CHAT') {
+      body.chatText = chatText.value.trim()
+      if (chatHrName.value.trim()) body.hrName = chatHrName.value.trim()
+      if (chatJobId.value) body.jobId = chatJobId.value
+    }
     await apiFetch('/api/v1/platforms/tasks', {
       method: 'POST',
       body,
@@ -272,6 +322,7 @@ const createTask = async () => {
     if (action.value === 'SYNC_JOBS') jobJd.value = ''
     if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') draftText.value = ''
     if (action.value === 'MARK_APPLIED') applyNote.value = ''
+    if (action.value === 'IMPORT_CHAT') chatText.value = ''
     await load()
   } catch (e: any) {
     error.value = e.message || '创建任务失败'
