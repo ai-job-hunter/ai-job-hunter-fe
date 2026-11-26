@@ -10,6 +10,7 @@
         <template v-if="job.city"> · {{ job.city }}</template>
         <template v-if="job.salaryText"> · {{ job.salaryText }}</template>
         · {{ statusLabel(job.status) }}
+        · {{ sourceLabel(job.source) }}
       </p>
 
       <section class="app-panel">
@@ -89,6 +90,7 @@ type JobDetail = {
   city?: string
   salaryText?: string
   status?: string
+  source?: string
   rawDescription?: string
   sourceUrl?: string
   greetingText?: string
@@ -115,6 +117,13 @@ const statusLabel = (s?: string) =>
     GREETED: '已生成话术',
     APPLIED: '已投递',
   } as Record<string, string>)[s || ''] || s || '-'
+
+const sourceLabel = (s?: string) =>
+  ({
+    MANUAL: '手动粘贴',
+    IMPORT: '平台导入',
+    PLATFORM: '平台同步',
+  } as Record<string, string>)[s || ''] || s || '手动粘贴'
 
 const skills = computed(() => {
   const a = job.value?.analysis || {}

@@ -65,6 +65,7 @@
               <template v-if="item.city"> · {{ item.city }}</template>
               <template v-if="item.salaryText"> · {{ item.salaryText }}</template>
               · {{ statusLabel(item.status) }}
+              <span class="app-badge">{{ sourceLabel(item.source) }}</span>
               <span v-if="item.matchScore != null" class="app-badge">匹配 {{ item.matchScore }}</span>
             </p>
           </div>
@@ -85,6 +86,7 @@ type JobItem = {
   city?: string
   salaryText?: string
   status?: string
+  source?: string
   matchScore?: number | null
 }
 
@@ -110,6 +112,13 @@ const statusLabel = (s?: string) =>
     APPLIED: '已投递',
     BLACKLISTED: '黑名单',
   } as Record<string, string>)[s || ''] || s || '-'
+
+const sourceLabel = (s?: string) =>
+  ({
+    MANUAL: '手动粘贴',
+    IMPORT: '平台导入',
+    PLATFORM: '平台同步',
+  } as Record<string, string>)[s || ''] || s || '手动粘贴'
 
 const load = async () => {
   const data = await apiFetch<{ items?: JobItem[] }>('/api/v1/jobs')
