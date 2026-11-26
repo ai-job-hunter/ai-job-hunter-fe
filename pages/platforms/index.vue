@@ -134,8 +134,7 @@
             class="app-input"
             rows="6"
             required
-            placeholder="每行一条。可写：&#10;HR: 您好，方便聊聊吗？&#10;我: 方便的，请问…
-无前缀的行默认当作 HR 消息"
+            placeholder="每行一条，可写 HR: … / 我: …；无前缀默认当作 HR"
           />
         </div>
       </template>

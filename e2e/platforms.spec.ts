@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 /**
- * V2 阶段 A：MOCK 连接 → 建任务 → 确认完成
+ * V2：MOCK 连接 → 导入 JD / 草稿复制 / 导入会话
  */
 test.describe('平台连接（MOCK）', () => {
   const suffix = Date.now().toString(36)
@@ -49,5 +49,14 @@ test.describe('平台连接（MOCK）', () => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write'])
     await page.getByRole('button', { name: '确认执行（mock）' }).first().click()
     await expect(page.getByText(/已复制到剪贴板|任务已完成/)).toBeVisible({ timeout: 15_000 })
+
+    await page.getByLabel('动作').selectOption('IMPORT_CHAT')
+    await page.getByLabel('HR 称呼（可选）').fill('E2E_HR')
+    await page.getByLabel('聊天原文').fill('HR: 方便聊聊吗？\n我: 方便，请问技术栈？')
+    await page.getByRole('button', { name: '创建待确认任务' }).click()
+    await expect(page.getByText('NEED_CONFIRM').first()).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: '确认执行（mock）' }).first().click()
+    await expect(page.getByText(/已导入会话/)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('link', { name: '查看已导入会话' }).first()).toBeVisible()
   })
 })
