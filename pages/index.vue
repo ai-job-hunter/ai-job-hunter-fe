@@ -39,6 +39,11 @@
         <p class="num">{{ jobCount ?? '—' }}</p>
         <p class="hint">粘贴 JD 分析 →</p>
       </NuxtLink>
+      <NuxtLink to="/platforms" class="app-tile">
+        <h3>平台导入</h3>
+        <p class="num">MOCK</p>
+        <p class="hint">粘贴 JD 半自动入库 →</p>
+      </NuxtLink>
       <NuxtLink to="/conversations" class="app-tile">
         <h3>沟通</h3>
         <p class="num">{{ convCount ?? '—' }}</p>
