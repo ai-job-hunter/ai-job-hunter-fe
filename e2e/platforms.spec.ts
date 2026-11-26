@@ -34,9 +34,12 @@ test.describe('平台连接（MOCK）', () => {
     await expect(page.getByText('MOCK 连接已就绪')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByText('CONNECTED').first()).toBeVisible()
 
+    await page.getByLabel('岗位名（可选）').fill('E2E导入岗')
+    await page.getByLabel('JD 原文').fill('负责 Vue / Java 开发，熟悉 Nuxt。')
     await page.getByRole('button', { name: '创建待确认任务' }).click()
     await expect(page.getByText('NEED_CONFIRM').first()).toBeVisible({ timeout: 15_000 })
     await page.getByRole('button', { name: '确认执行（mock）' }).first().click()
     await expect(page.getByText('DONE').first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/已导入岗位/)).toBeVisible({ timeout: 10_000 })
   })
 })

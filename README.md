@@ -31,8 +31,8 @@ AI Job Hunter 帮你把求职材料管起来，并用 AI 分析简历、拆解 J
 - 📊 **统计**：今日/趋势/漏斗 + 周报
 - ⚙️ **设置**：打招呼模板、黑名单（建岗时拦截）
 
-**尚未做（V2+）：** BOSS/多平台连接与代发（方案见 be 仓 `docs/12-V2-PLATFORM-AGENT-PLAN.md`）。  
-投递时间线备注已在 V1.x 看板可用。
+**尚未做（V2+）：** 真实招聘站代发（需合规接入）。**不建**独立 `ai-job-hunter-agent` 仓。  
+已有：投递时间线备注；平台页 MOCK + 本机粘贴 JD 导入。
 
 ## 技术架构
 
@@ -133,7 +133,7 @@ NUXT_DEV_PROXY_TARGET=http://127.0.0.1:8088 npm run dev -- --port 3010
 | `/applications` | 投递看板（状态推进 + 时间线备注） |
 | `/stats` | 今日概览 / 漏斗 / 趋势 / AI 周报 |
 | `/settings` | 打招呼模板 + 黑名单 |
-| `/platforms` | V2 平台 MOCK：连接 / 待确认任务（不爬真实站） |
+| `/platforms` | V2：MOCK 连接 + 粘贴 JD 导入岗位（不建 agent 仓、不爬站） |
 | `/profile` | 手机号、求职关键词、意向城市、**修改密码** |
 
 登录/注册页采用 **黛青水墨** 视觉 + **lonely √3** 品牌标（见 `public/logo.svg`）。登录后仪表盘 / 简历上传 / 资料页使用同一套 `--ink-*` 纸面风格（拖拽上传区、统一面板与列表），样式类在 `assets/css/main.css` 的 `.app-*`。

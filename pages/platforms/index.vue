@@ -2,7 +2,7 @@
   <div>
     <h1 class="app-page-title">平台连接</h1>
     <p class="app-page-desc">
-      V2 半自动骨架：先用 MOCK 走通「建连接 → 建任务 → 确认完成」。不会登录真实招聘站。
+      不建独立爬虫仓库：用 MOCK 连接 + 本机粘贴 JD，确认后写入岗位（source=IMPORT）。不会登录真实招聘站。
     </p>
 
     <div v-if="error" class="app-alert app-alert-error" role="alert">{{ error }}</div>
@@ -43,16 +43,37 @@
       <div class="row">
         <label class="app-label" for="action-select">动作</label>
         <select id="action-select" v-model="action" class="app-select">
-          <option value="SYNC_JOBS">同步岗位（mock）</option>
+          <option value="SYNC_JOBS">导入岗位（粘贴 JD）</option>
           <option value="DRAFT_GREET">草稿打招呼（mock）</option>
           <option value="FILL_REPLY">回填回复（mock）</option>
           <option value="MARK_APPLIED">标记已投递（mock）</option>
         </select>
       </div>
+      <template v-if="action === 'SYNC_JOBS'">
+        <div class="row">
+          <label class="app-label" for="job-title">岗位名（可选）</label>
+          <input id="job-title" v-model="jobTitle" class="app-input" placeholder="如 Java 后端" />
+        </div>
+        <div class="row">
+          <label class="app-label" for="job-company">公司（可选）</label>
+          <input id="job-company" v-model="jobCompany" class="app-input" placeholder="公司名" />
+        </div>
+        <div class="row">
+          <label class="app-label" for="job-jd">JD 原文</label>
+          <textarea
+            id="job-jd"
+            v-model="jobJd"
+            class="app-input"
+            rows="5"
+            required
+            placeholder="从招聘 App 复制 JD 粘贴到这里"
+          />
+        </div>
+      </template>
       <button
         type="button"
         class="app-btn"
-        :disabled="busy === 'task' || !selectedConn"
+        :disabled="busy === 'task' || !selectedConn || (action === 'SYNC_JOBS' && !jobJd.trim())"
         @click="createTask"
       >
         {{ busy === 'task' ? '创建中…' : '创建待确认任务' }}
@@ -99,6 +120,9 @@ const connections = ref<Conn[]>([])
 const tasks = ref<Task[]>([])
 const selectedConn = ref('')
 const action = ref('SYNC_JOBS')
+const jobTitle = ref('')
+const jobCompany = ref('')
+const jobJd = ref('')
 const busy = ref('')
 const error = ref('')
 const ok = ref('')
@@ -148,15 +172,22 @@ const createTask = async () => {
   error.value = ''
   ok.value = ''
   try {
+    const body: Record<string, string> = {
+      connectionId: selectedConn.value,
+      action: action.value,
+      mode: 'SEMI_AUTO',
+    }
+    if (action.value === 'SYNC_JOBS') {
+      body.rawDescription = jobJd.value.trim()
+      if (jobTitle.value.trim()) body.title = jobTitle.value.trim()
+      if (jobCompany.value.trim()) body.companyName = jobCompany.value.trim()
+    }
     await apiFetch('/api/v1/platforms/tasks', {
       method: 'POST',
-      body: {
-        connectionId: selectedConn.value,
-        action: action.value,
-        mode: 'SEMI_AUTO',
-      },
+      body,
     })
     ok.value = '任务已创建，请确认'
+    if (action.value === 'SYNC_JOBS') jobJd.value = ''
     await load()
   } catch (e: any) {
     error.value = e.message || '创建任务失败'
