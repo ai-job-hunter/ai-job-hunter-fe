@@ -72,9 +72,14 @@
               <template v-if="s.intent">意图 {{ s.intent }}</template>
               <template v-if="s.confidence != null"> · 置信 {{ s.confidence }}</template>
             </p>
-            <button class="app-btn" type="button" :disabled="busy" @click="sendSuggestion(s.content)">
-              采用并发送
-            </button>
+            <div class="suggest-actions">
+              <button class="app-btn app-btn-ghost" type="button" @click="copySuggestion(s.content)">
+                复制
+              </button>
+              <button class="app-btn" type="button" :disabled="busy" @click="sendSuggestion(s.content)">
+                采用并发送
+              </button>
+            </div>
           </li>
         </ul>
       </section>
@@ -193,6 +198,17 @@ const sendSuggestion = async (content?: string) => {
     busy.value = ''
   }
 }
+
+const copySuggestion = async (content?: string) => {
+  if (!content) return
+  error.value = ''
+  try {
+    await navigator.clipboard.writeText(content)
+    okMsg.value = '已复制到剪贴板，可粘贴到招聘 App'
+  } catch {
+    okMsg.value = '复制失败，请手动选择文本'
+  }
+}
 </script>
 
 <style scoped>
@@ -249,5 +265,11 @@ const sendSuggestion = async (content?: string) => {
   margin: 0 0 0.5rem;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+.suggest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 </style>

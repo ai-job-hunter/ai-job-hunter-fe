@@ -87,6 +87,13 @@
           </div>
           <p v-if="t.request?.hint" class="app-meta">{{ t.request.hint }}</p>
           <p v-if="t.result?.message" class="app-meta">{{ t.result.message }}</p>
+          <NuxtLink
+            v-if="t.result?.jobId"
+            class="app-btn app-btn-ghost"
+            :to="`/jobs/${t.result.jobId}`"
+          >
+            查看已导入岗位
+          </NuxtLink>
           <button
             v-if="t.status === 'NEED_CONFIRM' || t.status === 'PENDING'"
             type="button"
@@ -112,7 +119,7 @@ type Task = {
   action?: string
   status?: string
   request?: { hint?: string }
-  result?: { message?: string }
+  result?: { message?: string; jobId?: string }
 }
 
 const { apiFetch } = useApi()
