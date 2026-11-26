@@ -2,6 +2,18 @@
 
 > AI 求职助手（V1：手动粘贴 + AI 分析/话术；BOSS 自动操作延后 V2）
 
+## [变更记录]
+| 日期 | 版本 | 变更摘要 | 负责人 |
+|---|---|---|-----|
+| 2026-11-26 | v1.1 | 升级 Nuxt 3 → 4.7；CI Node 22；`package.json` 声明 `type: module` | orjrs |
+| 2026-11-23 | v1.0 | V1 说明书与范围说明 | orjrs |
+
+## [变更] Nuxt 4 升级（2026-11-26）
+
+- **变更原因**：Nuxt 3 进入维护末期；对齐官方 Node 22+ 与 Nuxt 4 默认行为。
+- **包含代码**：`package.json` / lockfile、`nuxt.config.ts` `compatibilityDate`、CI `node-version: 22`。
+- **不变**：页面功能与顶层目录结构（未强制迁入 `app/`）；`ssr: false` + `npm run generate` 静态托管。
+
 ## 项目简介
 
 AI Job Hunter 帮你把求职材料管起来，并用 AI 分析简历、拆解 JD、写打招呼/回复、跟投递进度。  
@@ -21,7 +33,7 @@ AI Job Hunter 帮你把求职材料管起来，并用 AI 分析简历、拆解 J
 ## 技术架构
 
 ```
-浏览器 → Nuxt 3 SPA → Spring Boot API → PostgreSQL / Redis
+浏览器 → Nuxt 4 SPA → Spring Boot API → PostgreSQL / Redis
                          ↓
                    DeepSeek（Spring AI）
 ```
@@ -30,7 +42,7 @@ AI Job Hunter 帮你把求职材料管起来，并用 AI 分析简历、拆解 J
 
 | 模块 | 技术 | 说明 |
 |-----|------|------|
-| 前端 | Vue 3 + Nuxt 3 | SPA（`ssr: false`） |
+| 前端 | Vue 3 + Nuxt 4 | SPA（`ssr: false`）；目录仍用 Nuxt 3 顶层布局（自动兼容） |
 | 后端 | Spring Boot 4 + JDK 21 | 业务 API + Agent |
 | 数据库 | PostgreSQL 18 | 业务数据 |
 | 缓存 | Redis | 缓存等 |
@@ -41,7 +53,7 @@ AI Job Hunter 帮你把求职材料管起来，并用 AI 分析简历、拆解 J
 ```
 ai-job-hunter/
 ├── ai-job-hunter-be/          # Java 后端 (Spring Boot)
-├── ai-job-hunter-fe/          # Nuxt 前端 (Vue 3 + shadcn-vue)
+├── ai-job-hunter-fe/          # Nuxt 4 前端 (Vue 3)
 ├── ai-job-hunter-agent/        # Python Agent (Playwright)
 ├── docker-compose.yml          # Docker 部署配置
 └── docs/                      # 文档
@@ -52,7 +64,7 @@ ai-job-hunter/
 ### 环境要求
 
 - JDK 21+
-- Node.js 18+
+- Node.js 22+（Nuxt 4 / CI / Docker 构建均按 22）
 - Python 3.11+
 - PostgreSQL 18+
 - Redis 7+
