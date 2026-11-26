@@ -44,8 +44,8 @@
         <label class="app-label" for="action-select">动作</label>
         <select id="action-select" v-model="action" class="app-select">
           <option value="SYNC_JOBS">导入岗位（粘贴 JD）</option>
-          <option value="DRAFT_GREET">草稿打招呼（mock）</option>
-          <option value="FILL_REPLY">回填回复（mock）</option>
+          <option value="DRAFT_GREET">复制打招呼话术</option>
+          <option value="FILL_REPLY">复制回复话术</option>
           <option value="MARK_APPLIED">标记已投递（mock）</option>
         </select>
       </div>
@@ -70,10 +70,28 @@
           />
         </div>
       </template>
+      <template v-else-if="action === 'DRAFT_GREET' || action === 'FILL_REPLY'">
+        <div class="row">
+          <label class="app-label" for="draft-text">话术内容</label>
+          <textarea
+            id="draft-text"
+            v-model="draftText"
+            class="app-input"
+            rows="4"
+            required
+            placeholder="粘贴或编写要发到招聘 App 的话术，确认后自动复制"
+          />
+        </div>
+      </template>
       <button
         type="button"
         class="app-btn"
-        :disabled="busy === 'task' || !selectedConn || (action === 'SYNC_JOBS' && !jobJd.trim())"
+        :disabled="
+          busy === 'task' ||
+          !selectedConn ||
+          (action === 'SYNC_JOBS' && !jobJd.trim()) ||
+          ((action === 'DRAFT_GREET' || action === 'FILL_REPLY') && !draftText.trim())
+        "
         @click="createTask"
       >
         {{ busy === 'task' ? '创建中…' : '创建待确认任务' }}
@@ -119,7 +137,7 @@ type Task = {
   action?: string
   status?: string
   request?: { hint?: string }
-  result?: { message?: string; jobId?: string }
+  result?: { message?: string; jobId?: string; clipboardText?: string }
 }
 
 const { apiFetch } = useApi()
@@ -130,6 +148,7 @@ const action = ref('SYNC_JOBS')
 const jobTitle = ref('')
 const jobCompany = ref('')
 const jobJd = ref('')
+const draftText = ref('')
 const busy = ref('')
 const error = ref('')
 const ok = ref('')
@@ -189,12 +208,16 @@ const createTask = async () => {
       if (jobTitle.value.trim()) body.title = jobTitle.value.trim()
       if (jobCompany.value.trim()) body.companyName = jobCompany.value.trim()
     }
+    if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') {
+      body.draftText = draftText.value.trim()
+    }
     await apiFetch('/api/v1/platforms/tasks', {
       method: 'POST',
       body,
     })
     ok.value = '任务已创建，请确认'
     if (action.value === 'SYNC_JOBS') jobJd.value = ''
+    if (action.value === 'DRAFT_GREET' || action.value === 'FILL_REPLY') draftText.value = ''
     await load()
   } catch (e: any) {
     error.value = e.message || '创建任务失败'
@@ -208,8 +231,20 @@ const confirmTask = async (id: string) => {
   error.value = ''
   ok.value = ''
   try {
-    await apiFetch(`/api/v1/platforms/tasks/${id}/confirm`, { method: 'POST' })
-    ok.value = 'mock 任务已完成'
+    const data = await apiFetch<{
+      result?: { message?: string; clipboardText?: string; jobId?: string }
+    }>(`/api/v1/platforms/tasks/${id}/confirm`, { method: 'POST' })
+    const clip = data?.result?.clipboardText?.trim()
+    if (clip && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(clip)
+        ok.value = '已复制到剪贴板，可粘贴到招聘 App'
+      } catch {
+        ok.value = data?.result?.message || '任务已完成（复制失败，请手动复制）'
+      }
+    } else {
+      ok.value = data?.result?.message || '任务已完成'
+    }
     await load()
   } catch (e: any) {
     error.value = e.message || '确认失败'
