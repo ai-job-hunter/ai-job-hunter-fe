@@ -16,6 +16,11 @@
 #
 # 需要的 GitHub Variables（可选）：
 #   DEPLOY_PRIMARY_BRANCH   主部署分支，默认 main
+#
+# 变更（2026-11-27）：
+#   - Resolve SSH port（空/非法→22）+ timeout 60s
+#   - 连上后先 cd DEPLOY_PATH，再写 UPGRADE_LOG / compose（避免 cwd 错位）
+#   - handshake EOF 与远程 script 无关，见 be docs/10-DEPLOYMENT.md Q0
 # =============================================================================
 
 name: CI/CD
@@ -119,34 +124,45 @@ jobs:
           ssh-keygen -l -f ~/ssh_key
           echo "SSH key validated"
 
+      - name: Resolve SSH port
+        id: ssh_port
+        env:
+          RAW_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+        run: |
+          PORT="${RAW_PORT:-22}"
+          case "$PORT" in
+            ''|*[!0-9]*) PORT=22 ;;
+          esac
+          echo "port=$PORT" >> "$GITHUB_OUTPUT"
+          echo "Using SSH port: $PORT"
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          # 与 job env 默认路径对齐；secret 为空时不要覆盖成空串
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/project/ai-job-hunter' }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          port: ${{ steps.ssh_port.outputs.port }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          timeout: 60s
+          command_timeout: 15m
           envs: DEPLOY_PATH
           script: |
             set -e
+            cd "$DEPLOY_PATH"
+
             echo "=== Login to GHCR ==="
             echo "${{ github.token }}" | docker login ${{ env.IMAGE_REGISTRY }} -u ${{ github.actor }} --password-stdin
 
             echo "=== Update upgrade log (UPGRADE_LOG.md, 仅记录，不注入环境变量) ==="
-            # 目标格式：markdown 表格，按日期分段
-            #   # AI Job Hunter Frontend 升级历史
-            #   ## 2026-09-19
-            #   | 时间 | 镜像 tag | 当前 |
-            #   |---|---|---|
-            #   | 21:00 | ai-job-hunter-fe-20260919210000 | latest |
-            #   | 18:00 | ai-job-hunter-fe-20260918180000 | 历史 |
             TS=$(date -u +'%H:%M')
+            TODAY=$(date -u +'%Y-%m-%d')
             TAG=${{ needs.build.outputs.image_tag }}
-            if ! grep -qE "^## \$(date -u +'%Y-%m-%d')" UPGRADE_LOG.md 2>/dev/null; then
+            if ! grep -qE "^## $TODAY" UPGRADE_LOG.md 2>/dev/null; then
               echo "" >> UPGRADE_LOG.md
-              echo "## $(date -u +'%Y-%m-%d')" >> UPGRADE_LOG.md
+              echo "## $TODAY" >> UPGRADE_LOG.md
               echo "" >> UPGRADE_LOG.md
               echo "| 时间 (UTC) | 镜像 tag | 当前 |" >> UPGRADE_LOG.md
               echo "|---|---|---|" >> UPGRADE_LOG.md
@@ -154,12 +170,11 @@ jobs:
             echo "| $TS | \`$TAG\` | latest |" >> UPGRADE_LOG.md
 
             echo "=== Pull and restart (tag: latest) ==="
-            docker compose -f $DEPLOY_PATH/docker-compose.yml pull ai-job-hunter-fe
-            docker compose -f $DEPLOY_PATH/docker-compose.yml up -d --remove-orphans ai-job-hunter-fe
+            docker compose -f docker-compose.yml pull ai-job-hunter-fe
+            docker compose -f docker-compose.yml up -d --remove-orphans ai-job-hunter-fe
 
             echo "=== Done ==="
-            docker compose -f $DEPLOY_PATH/docker-compose.yml ps ai-job-hunter-fe
-
+            docker compose -f docker-compose.yml ps ai-job-hunter-fe
       - name: Summary
         if: always()
         run: |

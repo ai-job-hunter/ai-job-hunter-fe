@@ -200,6 +200,8 @@ V1 **没有** BOSS 浏览器自动化。`ai-job-hunter-agent` 仓库若存在，
 
 **502 Bad Gateway**：多半是服务器 compose 仍写端口 **3000**（旧 Node），而新镜像是 Nginx **80**。CD 不覆盖远程 compose，需人工改后 `docker compose up -d --force-recreate ai-job-hunter-fe`。
 
+**CD `ssh: handshake failed: EOF`**：不是远程 `script` 的问题（握手成功前脚本不会执行）。核对 Secrets 的主机/端口/用户与服务器 sshd/防火墙；详见后端 `docs/10-DEPLOYMENT.md` Q0。FE `cd.yml` 已：解析 SSH 端口默认 22、握手 timeout 60s；连上后先 `cd "$DEPLOY_PATH"` 再写 `UPGRADE_LOG.md` / `docker compose`。
+
 **浏览器显示「危险」**：证书往往正常（Let's Encrypt）；常见是 SPA 写了 `try_files $uri $uri/`，Nginx 补斜杠 301 在 Traefik 后写成 `http://...`。正确写法：`try_files $uri /index.html`（不要 `$uri/`）。
 
 **Chrome「不安全」但 Safari/无痕正常**：多半是普通窗口站点缓存；清该站数据即可，服务端一般不用为这个加 HSTS。
