@@ -175,7 +175,7 @@ PLAYWRIGHT_BASE_URL=http://127.0.0.1:3010 npm run test:e2e
 - `e2e/conversations.spec.ts`：创建对话 → 详情 → 投递看板
 - `e2e/stats.spec.ts`：仪表盘今日 → 统计页 → 设置模板/黑名单
 - `e2e/profile.spec.ts`：资料保存 + 改密码错误旧密提示
-- `e2e/platforms.spec.ts`：MOCK 连接 → 导入 JD / 草稿复制 → 确认
+- `e2e/platforms.spec.ts`：MOCK → 导入 JD / 草稿复制 / 导入会话 / 标记投递
 
 策略与 CI 门禁见后端 `docs/09-TEST-STRATEGY.md` §1.3。每个功能本地须 `*LiveIT` + `npm run test:e2e` 通过后再开下一任务。
 

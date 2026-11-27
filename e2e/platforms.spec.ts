@@ -58,5 +58,38 @@ test.describe('平台连接（MOCK）', () => {
     await page.getByRole('button', { name: '确认执行（mock）' }).first().click()
     await expect(page.getByText(/已导入会话/)).toBeVisible({ timeout: 15_000 })
     await expect(page.getByRole('link', { name: '查看已导入会话' }).first()).toBeVisible()
+
+    await page.goto('/resumes')
+    const fileInput = page.locator('input[type="file"]')
+    await fileInput.setInputFiles({
+      name: `plat-resume-${suffix}.txt`,
+      mimeType: 'text/plain',
+      buffer: Buffer.from('E2E求职者\nJava Vue\n3年经验'),
+    })
+    await page.getByLabel('简历名称').fill(`平台E2E简历${suffix}`)
+    await page.getByRole('button', { name: '开始上传' }).click()
+    await expect(page.getByRole('link', { name: `平台E2E简历${suffix}` })).toBeVisible({
+      timeout: 20_000,
+    })
+
+    await page.goto('/platforms')
+    await page.getByLabel('动作').selectOption('MARK_APPLIED')
+    const jobOpt = page.locator('#apply-job option').filter({ hasText: 'E2E导入岗' }).first()
+    const jobVal = await jobOpt.getAttribute('value')
+    expect(jobVal).toBeTruthy()
+    await page.locator('#apply-job').selectOption(jobVal!)
+    const resumeOpt = page
+      .locator('#apply-resume option')
+      .filter({ hasText: `平台E2E简历${suffix}` })
+      .first()
+    const resumeVal = await resumeOpt.getAttribute('value')
+    expect(resumeVal).toBeTruthy()
+    await page.locator('#apply-resume').selectOption(resumeVal!)
+    await page.getByLabel('备注（可选）').fill('e2e 标记')
+    await page.getByRole('button', { name: '创建待确认任务' }).click()
+    await expect(page.getByText('NEED_CONFIRM').first()).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('button', { name: '确认执行（mock）' }).first().click()
+    await expect(page.getByText(/^已记入投递看板$/).first()).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('link', { name: '查看投递看板' }).first()).toBeVisible()
   })
 })
