@@ -2,15 +2,20 @@
   <div>
     <h1 class="app-page-title">平台连接</h1>
     <p class="app-page-desc">
-      不建独立爬虫仓库：用 MOCK 连接 + 本机粘贴 JD，确认后写入岗位（source=IMPORT）。不会登录真实招聘站。
+      本机半自动：粘贴 JD / 聊天、复制话术、标记投递。不建独立爬虫仓，也不会替你登录招聘站。
     </p>
+
+    <div class="app-alert app-alert-ok risk" role="note">
+      <strong>使用边界：</strong>
+      当前仅 MOCK + 你自己粘贴的内容。不会保存招聘站密码/Cookie，不会自动群发。真平台接入需官方授权后再开。
+    </div>
 
     <div v-if="error" class="app-alert app-alert-error" role="alert">{{ error }}</div>
     <div v-if="ok" class="app-alert app-alert-ok">{{ ok }}</div>
 
     <section class="app-panel block">
       <h2 class="sec-title">连接</h2>
-      <p class="app-meta">当前仅开放 MOCK（真实平台接入见方案文档）。</p>
+      <p class="app-meta">当前仅开放 MOCK（BOSS/猎聘等真实平台待授权）。</p>
       <button
         type="button"
         class="app-btn"
@@ -384,6 +389,9 @@ const confirmTask = async (id: string) => {
 </script>
 
 <style scoped>
+.risk {
+  margin-bottom: 1rem;
+}
 .block {
   margin-bottom: 1rem;
 }
